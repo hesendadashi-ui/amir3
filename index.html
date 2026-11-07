@@ -463,7 +463,12 @@ const LSK = "ahmadiOV";
 const OV0 = /*OV_START*/{"add":[],"mod":{},"del":[]}/*OV_END*/;
 let ADMIN = false, OV = JSON.parse(JSON.stringify(OV0));
 try { if (sessionStorage.getItem("ahmadiAdmin") === "1") { ADMIN = true; const s = localStorage.getItem(LSK); if (s) OV = JSON.parse(s); } } catch (e) {}
-const saveOV = () => { try { localStorage.setItem(LSK, JSON.stringify(OV)); } catch (e) { alert("حافظه‌ی مرورگر پر است؛ عکس کوچک‌تری انتخاب کن یا نسخه‌ی به‌روز را دانلود کن."); } };
+let pushT;
+const saveOV = () => {
+  try { localStorage.setItem(LSK, JSON.stringify(OV)); } catch (e) { alert("حافظه‌ی مرورگر پر است؛ عکس کوچک‌تری انتخاب کن."); }
+  clearTimeout(pushT);
+  if (ghCfg().token) pushT = setTimeout(() => pushToGitHub(), 1500);   // چند تغییر پشت‌سرهم = یک انتشار
+};
 const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 function ITEMS() {
   const del = new Set(OV.del || []);
@@ -550,6 +555,77 @@ async function exportHTML() {
     alert("از روی فایل لوکال نمی‌شود نسخه‌ی کامل ساخت. محتوای تغییرات کپی شد؛ سایت را از آدرس گیت‌هاب باز کن و دوباره دانلود را بزن.");
   }
 }
+
+/* ===== انتشار خودکار روی گیت‌هاب (فقط با توکنِ ذخیره‌شده در همین مرورگر) ===== */
+const GHK = "ahmadiGH";
+const ghCfg = () => { let c = {}; try { c = JSON.parse(localStorage.getItem(GHK) || "{}"); } catch (e) {} return Object.assign({ owner: "hesendadashi-ui", repo: "amir3", path: "index.html", token: "" }, c); };
+const ghHead = (t, accept) => ({ Authorization: "Bearer " + t, Accept: accept || "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" });
+const ghErr = e => { const m = String(e && e.message || e);
+  if (m === "401") return "توکن اشتباه است یا منقضی شده";
+  if (m === "403") return "توکن اجازه‌ی نوشتن ندارد (Contents ← Read and write)";
+  if (m === "404") return "نام کاربری/مخزن/فایل پیدا نشد یا توکن به این مخزن دسترسی ندارد";
+  if (m === "no-marker") return "در فایل روی گیت‌هاب بخش تغییرات پیدا نشد؛ نام فایل را چک کن";
+  if (m === "409" || m === "422") return "هم‌زمان فایل عوض شد؛ دوباره امتحان کن";
+  return "اتصال به گیت‌هاب برقرار نشد (" + m + ")"; };
+function ghBox() {
+  const c = ghCfg();
+  mdBox('<h3>⚙️ اتصال به گیت‌هاب</h3><label>نام کاربری گیت‌هاب</label><input id="g1" dir="ltr" value="' + esc(c.owner) + '"><label>نام مخزن (repo)</label><input id="g2" dir="ltr" value="' + esc(c.repo) + '"><label>نام فایل سایت</label><input id="g3" dir="ltr" value="' + esc(c.path) + '"><label>توکن گیت‌هاب</label><input id="g4" type="password" dir="ltr" autocomplete="off" placeholder="' + (c.token ? "ذخیره شده؛ برای تغییر، توکن جدید بنویس" : "github_pat_...") + '"><div class="msg" id="gm"></div><div class="row"><button id="c0">بستن</button><button class="ok" id="c1">ذخیره و آزمایش</button></div>');
+  $("c0").onclick = mdClose;
+  $("c1").onclick = async () => {
+    const n = { owner: $("g1").value.trim(), repo: $("g2").value.trim(), path: $("g3").value.trim().replace(/^\/+/, "") || "index.html", token: $("g4").value.trim() || c.token };
+    if (!n.token) { $("gm").textContent = "توکن را وارد کن"; return; }
+    $("gm").style.color = ""; $("gm").textContent = "در حال آزمایش...";
+    try {
+      const r = await fetch("https://api.github.com/repos/" + n.owner + "/" + n.repo, { headers: ghHead(n.token) });
+      if (!r.ok) throw new Error(r.status);
+      const j = await r.json();
+      if (j.permissions && !j.permissions.push) throw new Error("403");
+      localStorage.setItem(GHK, JSON.stringify(n));
+      $("gm").style.color = "#2a9d5c"; $("gm").textContent = "✅ وصل شد؛ از این به بعد هر تغییر خودکار روی سایت منتشر می‌شود";
+    } catch (e) { $("gm").textContent = "❌ " + ghErr(e); }
+  };
+}
+let pushing = false, pushAgain = false;
+async function pushToGitHub(manual) {
+  const c = ghCfg();
+  if (!c.token) { if (manual) ghBox(); return false; }
+  if (pushing) { pushAgain = true; return false; }
+  pushing = true;
+  if (manual) toast("در حال انتشار روی گیت‌هاب...");
+  try {
+    const api = "https://api.github.com/repos/" + c.owner + "/" + c.repo;
+    const rj = await fetch(api, { headers: ghHead(c.token) });
+    if (!rj.ok) throw new Error(rj.status);
+    const br = (await rj.json()).default_branch;
+    const file = api + "/contents/" + c.path.split("/").map(encodeURIComponent).join("/");
+    for (let tries = 0; tries < 2; tries++) {
+      const q = "?ref=" + encodeURIComponent(br) + "&t=" + Date.now();
+      const r1 = await fetch(file + q, { headers: ghHead(c.token) });
+      if (!r1.ok) throw new Error(r1.status);
+      const sha = (await r1.json()).sha;
+      const r2 = await fetch(file + q, { headers: ghHead(c.token, "application/vnd.github.raw+json") });
+      if (!r2.ok) throw new Error(r2.status);
+      const text = await r2.text();
+      const re = /\/\*OV_START\*\/[\s\S]*?\/\*OV_END\*\//;
+      if (!re.test(text)) throw new Error("no-marker");
+      const json = JSON.stringify(OV).replace(/<\//g, "<\\/");
+      const out = text.replace(re, () => "/*OV_START*/" + json + "/*OV_END*/");
+      if (out === text) { toast("✅ همه‌چیز از قبل روی سایت است"); return true; }
+      const bytes = new TextEncoder().encode(out); let s = "";
+      for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+      const r3 = await fetch(file, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, ghHead(c.token)),
+        body: JSON.stringify({ message: "update from admin", content: btoa(s), sha: sha, branch: br }) });
+      if (r3.ok) { toast("✅ روی گیت‌هاب ذخیره شد؛ تا حدود یک دقیقه دیگر روی سایت می‌آید"); return true; }
+      if (r3.status !== 409 && r3.status !== 422) throw new Error(r3.status);
+    }
+    throw new Error("409");
+  } catch (e) {
+    toast("❌ " + ghErr(e)); return false;
+  } finally {
+    pushing = false;
+    if (pushAgain) { pushAgain = false; setTimeout(pushToGitHub, 500); }
+  }
+}
 function showItem(it) {
   const k = DK[it[0]]; const im = it[4] || (k && k.img) || "";
   mdBox('<div class="pv">' + (im ? '<img src="' + esc(im) + '" alt="" referrerpolicy="no-referrer">' : (window.iconFor ? iconFor(it) : it[3])) + '</div><h3>' + esc(it[0]) + '</h3>' +
@@ -560,9 +636,9 @@ function showItem(it) {
 }
 /* نوار ابزار مدیر */
 const bar = document.createElement("div"); bar.id = "adm";
-bar.innerHTML = '<button id="a1">➕ کالای جدید</button><button id="a2" class="y">💰 ویرایش قیمت</button><button id="a3">⬇️ دانلود نسخه‌ی به‌روز</button><button id="a4" class="x">خروج</button>';
+bar.innerHTML = '<button id="a1">➕ کالای جدید</button><button id="a2" class="y">💰 ویرایش قیمت</button><button id="a3">🚀 انتشار روی سایت</button><button id="a5" class="y">⚙️ گیت‌هاب</button><button id="a6">⬇️ دانلود فایل</button><button id="a4" class="x">خروج</button>';
 document.body.appendChild(bar);
-$("a1").onclick = () => productForm(null); $("a2").onclick = pctBox; $("a3").onclick = exportHTML; $("a4").onclick = () => setAdmin(false);
+$("a1").onclick = () => productForm(null); $("a2").onclick = pctBox; $("a3").onclick = () => pushToGitHub(true); $("a5").onclick = ghBox; $("a6").onclick = exportHTML; $("a4").onclick = () => setAdmin(false);
 /* ورود مدیر: پاورقی و منو */
 const lk = document.createElement("div"); lk.style.cssText = "text-align:center;margin-top:14px";
 lk.innerHTML = '<a href="#" id="lg" style="color:var(--muted);font-size:15px">🔒 ورود مدیر</a>'; document.querySelector("footer .w").appendChild(lk);
