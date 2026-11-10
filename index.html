@@ -662,7 +662,7 @@ async function exportHTML() {
   try {
     const t = await (await fetch(location.href.split("#")[0], { cache: "no-store" })).text();
     const out = t.replace(/\/\*OV_START\*\/[\s\S]*?\/\*OV_END\*\//, () => "/*OV_START*/" + json + "/*OV_END*/");
-    const out2 = out.replace(/\/\*ACC_START\*\/[\s\S]*?\/\*ACC_END\*\//, () => "/*ACC_START*/{"cust":[{"id":"mwates4zq7sp","name":"امیرحسین احمدی","phone":"09392184151","note":"تست1","open":0,"m":1794322705141}],"tx":[],"chk":[],"inv":[],"del":[],"u":1794322705141}/*ACC_END*/");
+    const out2 = out.replace(/\/\*ACC_START\*\/[\s\S]*?\/\*ACC_END\*\//, () => "/*ACC_START*/{"cust":[{"id":"mwates4zq7sp","name":"امیرحسین احمدی","phone":"09392184151","note":"تست1","open":0,"m":1794324191534}],"tx":[],"chk":[],"inv":[],"del":[],"u":1794324191534}/*ACC_END*/");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([out2], { type: "text/html" })); a.download = "ahmadi-shop.html"; a.click();
     alert("فایل جدید دانلود شد. آن را در گیت‌هاب جایگزین فایل قبلی کن (نامش باید همان نام فایل سایت باشد).");
   } catch (e) {
