@@ -657,8 +657,8 @@ async function exportHTML() {
   const json = JSON.stringify(OV);
   try {
     const t = await (await fetch(location.href.split("#")[0], { cache: "no-store" })).text();
-    const out = t.replace(/\/\*OV_START\*\/[\s\S]*?\/\*OV_END\*\//, () => "/*OV_START*/" + json + "/*OV_END*/");
-    const out2 = out.replace(/\/\*ACC_START\*\/[\s\S]*?\/\*ACC_END\*\//, () => "/*ACC_START*/{"cust":[{"id":"mwates4zq7sp","name":"امیرحسین احمدی","phone":"09392184151","note":"تست1","open":0,"m":1794322705141}],"tx":[],"chk":[],"inv":[{"id":"mwbpq6f41b0a","kind":"sale","no":"1001","ts":1794376984576,"cust":"mwates4zq7sp","name":"امیرحسین احمدی","date":"1405/08/19","total":225000,"data":{"no":"۱۰۰۱","date":"۱۴۰۵/۰۸/۱۹","name":"امیرحسین احمدی","phone":"09392184151","items":[{"n":"ماژیک سی دی ۶۸۲۴","d":"","q":3,"p":75000}],"dt":"pct","dv":0,"tax":0,"valid":3,"note":"از خرید شما سپاسگزاریم.\nجهت هرگونه سؤال یا مرجوعی، این فاکتور را همراه داشته باشید.","card":true,"paid":0,"cust":"mwates4zq7sp","pq":1},"m":1794377711163}],"del":[],"u":1794377711163}/*ACC_END*/");
+    const out = t.replace(/\/\*OV_START\*\/[\s\S]*?\/\*OV_END\*\//, () => "/*OV_"+"START*/" + json + "/*OV_"+"END*/");
+    const out2 = out.replace(/\/\*ACC_START\*\/[\s\S]*?\/\*ACC_END\*\//, () => "/*ACC_"+"START*/" + JSON.stringify(window.ACCAPI ? ACCAPI.data() : ACC0).replace(/<\//g, "<\\/") + "/*ACC_"+"END*/");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([out2], { type: "text/html" })); a.download = "ahmadi-shop.html"; a.click();
     alert("فایل جدید دانلود شد. آن را در گیت‌هاب جایگزین فایل قبلی کن (نامش باید همان نام فایل سایت باشد).");
   } catch (e) {
@@ -730,7 +730,7 @@ async function pushToGitHub(manual) {
       if (!re.test(text)) { try { const r4 = await fetch(location.href.split("#")[0].split("?")[0] + "?t=" + Date.now(), { cache: "no-store" }); const t4 = await r4.text(); if (re.test(t4)) text = t4; } catch (e4) {} }
       if (!re.test(text)) { const er = new Error("no-marker"); er.info = text.length + " bytes: " + text.slice(0, 40).replace(/\s+/g, " "); throw er; }
       const json = JSON.stringify(OV).replace(/<\//g, "<\\/");
-      const out = text.replace(re, () => "/*OV_START*/" + json + "/*OV_END*/");
+      const out = text.replace(re, () => "/*OV_"+"START*/" + json + "/*OV_"+"END*/");
       if (out === text) { toast("✅ همه‌چیز از قبل روی سایت است"); return true; }
       const bytes = new TextEncoder().encode(out); let s = "";
       for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
@@ -1284,7 +1284,7 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
 
 
 /* ==== اطلاعات حسابداری: با پنل مدیر و توکن گیت‌هاب خودکار پر می‌شود (دستی ویرایش نکن) ==== */
-const ACC0 = /*ACC_START*/{"cust":[],"tx":[],"chk":[],"inv":[],"del":[],"u":0}/*ACC_END*/;
+const ACC0 = /*ACC_START*/{"cust":[{"id":"mwates4zq7sp","name":"امیرحسین احمدی","phone":"09392184151","note":"تست1","open":0,"m":1794322705141}],"tx":[],"chk":[],"inv":[{"id":"mwbpq6f41b0a","kind":"sale","no":"1001","ts":1794376984576,"cust":"mwates4zq7sp","name":"امیرحسین احمدی","date":"1405/08/19","total":225000,"data":{"no":"۱۰۰۱","date":"۱۴۰۵/۰۸/۱۹","name":"امیرحسین احمدی","phone":"09392184151","items":[{"n":"ماژیک سی دی ۶۸۲۴","d":"","q":3,"p":75000}],"dt":"pct","dv":0,"tax":0,"valid":3,"note":"از خرید شما سپاسگزاریم.\nجهت هرگونه سؤال یا مرجوعی، این فاکتور را همراه داشته باشید.","card":true,"paid":0,"cust":"mwates4zq7sp","pq":1},"m":1794377711163}],"del":[],"u":1794377711163}/*ACC_END*/;
 
 /* ===== حسابداری (فقط مدیر): فقط در حافظه‌ی همین مرورگر؛ هیچ‌وقت روی گیت‌هاب نمی‌رود ===== */
 (function () {
@@ -1357,7 +1357,7 @@ const ACC0 = /*ACC_START*/{"cust":[],"tx":[],"chk":[],"inv":[],"del":[],"u":0}/*
         const mm = text.match(re); if (!mm) throw new Error("no-marker");
         let remote = null; try { remote = JSON.parse(mm[1]); } catch (e) {}
         A = merge(A, remote); persist(); if (acc.classList.contains("on")) paint();
-        const json = JSON.stringify(A).replace(/<\//g, "<\\/"), out = text.replace(re, () => "/*ACC_START*/" + json + "/*ACC_END*/");
+        const json = JSON.stringify(A).replace(/<\//g, "<\\/"), out = text.replace(re, () => "/*ACC_"+"START*/" + json + "/*ACC_"+"END*/");
         if (out === text) { if (manual) toast("✅ حساب با سایت هم‌گام است"); return true; }
         const bytes = new TextEncoder().encode(out); let st = ""; for (let i = 0; i < bytes.length; i += 8192) st += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
         const r3 = await fetch(file, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, ghHead(c.token)), body: JSON.stringify({ message: "update accounting", content: btoa(st), sha: j1.sha, branch: br }) });
