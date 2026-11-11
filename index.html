@@ -575,6 +575,7 @@ let ADMIN = false, OV = JSON.parse(JSON.stringify(OV0));
 try { if (sessionStorage.getItem("ahmadiAdmin") === "1") { ADMIN = true; const s = localStorage.getItem(LSK); if (s) OV = JSON.parse(s); } } catch (e) {}
 let pushT;
 const saveOV = () => {
+  try { const k = getKey(); if (k) OV.gk = k; } catch (e) {}
   try { localStorage.setItem(LSK, JSON.stringify(OV)); } catch (e) { alert("حافظه‌ی مرورگر پر است؛ عکس کوچک‌تری انتخاب کن."); }
   clearTimeout(pushT);
   if (ghCfg().token) pushT = setTimeout(() => pushToGitHub(), 1500);   // چند تغییر پشت‌سرهم = یک انتشار
@@ -601,10 +602,136 @@ function loginBox() {
   const go = () => { if ($("pw").value === ADMIN_PASS) { mdClose(); setAdmin(true); } else { $("pm").textContent = "رمز اشتباه است"; } };
   $("c0").onclick = mdClose; $("c1").onclick = go; $("pw").onkeydown = e => { if (e.key === "Enter") go(); }; setTimeout(() => $("pw").focus(), 50);
 }
-function resizeImg(file, cb) {
-  const r = new FileReader();
-  r.onload = () => { const im = new Image(); im.onload = () => { const s = Math.min(1, 600 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = im.width * s; c.height = im.height * s; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL("image/jpeg", .8)); }; im.src = r.result; };
-  r.readAsDataURL(file);
+const GK = "ahmadiGem";
+const getKey = () => { let k = ""; try { k = localStorage.getItem(GK) || ""; } catch (e) {} if (!k && OV0 && OV0.gk) { k = OV0.gk; try { localStorage.setItem(GK, k); } catch (e) {} } return k; };
+function askKey() { const k = prompt("کلید API جمینی (فقط یک بار لازم است):", getKey()); if (k === null) return false; try { localStorage.setItem(GK, k.trim()); if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} if (getKey()) { OV.gk = getKey(); saveOV(); } return !!getKey(); }
+const DEF_PROMPT = "product photography, isolated on a clean seamless pure white background, perfectly centered composition, high-quality, studio lighting, no text, no watermark, no writing --ar 1:1 --no text, writing, watermark, words, letters";
+function shrink(src, cb, max = 600, q = .8) {
+  const im = new Image();
+  im.onload = () => { const s = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL("image/jpeg", q)); };
+  im.onerror = () => toast("❌ عکس خوانده نشد");
+  im.src = src;
+}
+function resizeImg(file, cb) { const r = new FileReader(); r.onload = () => shrink(r.result, cb, 800, .85); r.readAsDataURL(file); }
+async function gemini(img, prompt) {
+  let key = getKey(); if (!key && askKey()) key = getKey(); if (!key) throw new Error("کلید جمینی وارد نشد");
+  if (img.indexOf("data:") !== 0) throw new Error("عکس را از گالری یا دوربین انتخاب کن");
+  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent", {
+    method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt + "\nOutput a square 1:1 image." }, { inline_data: { mime_type: "image/jpeg", data: img.split(",")[1] } }] }] }) });
+  const j = await r.json(); if (!r.ok) throw new Error((j.error && j.error.message) || r.status);
+  const p = ((j.candidates || [{}])[0].content || {}).parts; const d = p && p.map(x => x.inlineData || x.inline_data).find(Boolean);
+  if (!d) throw new Error("جمینی عکسی برنگرداند؛ دوباره تلاش کن یا دستور را عوض کن");
+  return "data:" + (d.mimeType || d.mime_type || "image/png") + ";base64," + d.data;
+}
+/* پس‌زمینه‌ی سفید + روشن‌کردن عکس، کاملاً داخل مرورگر و رایگان */
+const CLEAN_TRY = [[120, 20], [170, 34], [80, 12]];
+function cleanPhoto(src, cb, t = 0, S = 800) {
+  const [cap, stp] = CLEAN_TRY[t % CLEAN_TRY.length];
+  const im = new Image();
+  im.onerror = () => toast("❌ عکس خوانده نشد");
+  im.onload = () => {
+    const k = Math.min(1, 1000 / Math.max(im.width, im.height)), w = Math.round(im.width * k), h = Math.round(im.height * k), n = w * h;
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(im, 0, 0, w, h);
+    const id = x.getImageData(0, 0, w, h), d = id.data;
+    // رنگ پس‌زمینه = میانگین لبه‌های عکس
+    let br = 0, bgc = 0, bb = 0, cnt = 0;
+    const addB = j => { br += d[j * 4]; bgc += d[j * 4 + 1]; bb += d[j * 4 + 2]; cnt++; };
+    for (let i = 0; i < w; i++) { addB(i); addB((h - 1) * w + i); }
+    for (let r = 0; r < h; r++) { addB(r * w); addB(r * w + w - 1); }
+    br /= cnt; bgc /= cnt; bb /= cnt;
+    const near = j => Math.abs(d[j * 4] - br) + Math.abs(d[j * 4 + 1] - bgc) + Math.abs(d[j * 4 + 2] - bb) < cap;
+    const sim = (a, b) => Math.abs(d[a * 4] - d[b * 4]) + Math.abs(d[a * 4 + 1] - d[b * 4 + 1]) + Math.abs(d[a * 4 + 2] - d[b * 4 + 2]) < stp;
+    const mask = new Uint8Array(n), q = new Int32Array(n); let qh = 0, qt = 0;
+    const seed = j => { if (!mask[j] && near(j)) { mask[j] = 1; q[qt++] = j; } };
+    for (let i = 0; i < w; i++) { seed(i); seed((h - 1) * w + i); }
+    for (let r = 0; r < h; r++) { seed(r * w); seed(r * w + w - 1); }
+    const tryN = (j, p) => { if (!mask[j] && near(j) && sim(j, p)) { mask[j] = 1; q[qt++] = j; } };
+    while (qh < qt) {
+      const p = q[qh++], px = p % w;
+      if (px > 0) tryN(p - 1, p); if (px < w - 1) tryN(p + 1, p);
+      if (p >= w) tryN(p - w, p); if (p < n - w) tryN(p + w, p);
+    }
+    const cover = qt / n; let removed = cover > .05 && cover < .95;
+    if (!removed) mask.fill(0);
+    // مرز کالا
+    let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) if (!mask[y * w + xx]) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 <= x0 || y1 <= y0) { x0 = 0; y0 = 0; x1 = w - 1; y1 = h - 1; }
+    // روشن و واضح‌کردن خودکار (فقط روی خود کالا)
+    const hist = new Uint32Array(256); let nn = 0;
+    for (let i = 0; i < n; i++) if (!mask[i]) { hist[(d[i * 4] * .299 + d[i * 4 + 1] * .587 + d[i * 4 + 2] * .114) | 0]++; nn++; }
+    let lo = 0, hi = 255, ac = 0;
+    while (lo < 254 && (ac += hist[lo]) < nn * .01) lo++;
+    ac = 0; while (hi > 1 && (ac += hist[hi]) < nn * .01) hi--;
+    const f = hi - lo > 60 ? 255 / (hi - lo) : 1; if (f === 1) lo = 0;
+    const cl = v => v < 0 ? 0 : v > 255 ? 255 : v;
+    for (let i = 0; i < n; i++) {
+      const o = i * 4;
+      if (mask[i]) { d[o] = d[o + 1] = d[o + 2] = 255; continue; }
+      let r = (d[o] - lo) * f, g = (d[o + 1] - lo) * f, b = (d[o + 2] - lo) * f;
+      const L = r * .299 + g * .587 + b * .114;
+      d[o] = cl(L + (r - L) * 1.12); d[o + 1] = cl(L + (g - L) * 1.12); d[o + 2] = cl(L + (b - L) * 1.12);
+    }
+    // لبه‌ی نرم
+    if (removed) for (let y = 1; y < h - 1; y++) for (let xx = 1; xx < w - 1; xx++) {
+      const i = y * w + xx; if (mask[i]) continue;
+      if (mask[i - 1] || mask[i + 1] || mask[i - w] || mask[i + w]) { const o = i * 4; d[o] = (d[o] + 255) >> 1; d[o + 1] = (d[o + 1] + 255) >> 1; d[o + 2] = (d[o + 2] + 255) >> 1; }
+    }
+    x.putImageData(id, 0, 0);
+    const o = document.createElement("canvas"); o.width = o.height = S;
+    const ox = o.getContext("2d"); ox.fillStyle = "#fff"; ox.fillRect(0, 0, S, S);
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, sc = Math.min(S * .9 / Math.max(bw, bh), 1.3);
+    ox.imageSmoothingQuality = "high";
+    ox.drawImage(c, x0, y0, bw, bh, (S - bw * sc) / 2, (S - bh * sc) / 2, bw * sc, bh * sc);
+    cb(o.toDataURL("image/jpeg", .88), removed);
+  };
+  im.src = src;
+}
+const friendlyErr = e => { const m = String(e && e.message || e);
+  if (/quota|limit: 0|RESOURCE_EXHAUSTED|429/i.test(m)) return "پلن رایگان گوگل ساخت عکس را شامل نمی‌شود. از «🪄 پس‌زمینه‌ی سفید» استفاده کن یا پرامپت را در اپ جمینی بزن.";
+  if (/API key|API_KEY|PERMISSION|403|401/i.test(m)) return "کلید جمینی قبول نشد؛ دکمه‌ی 🔑 را بزن و کلید درست را وارد کن.";
+  if (/fetch|network|Load failed/i.test(m)) return "به گوگل وصل نشد؛ VPN را روشن کن.";
+  return m.length > 110 ? m.slice(0, 110) + "…" : m; };
+const copyTxt = t => { try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t); } catch (e) {}
+  return new Promise((ok, no) => { try { const a = document.createElement("textarea"); a.value = t; a.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(a); a.select(); const r = document.execCommand("copy"); a.remove(); r ? ok() : no(); } catch (e) { no(e); } }); };
+const IMG_PV = 'display:none;width:100%;max-height:220px;object-fit:contain;border-radius:12px;margin-top:6px;background:#fff;border:1px solid var(--line)';
+const imgHTML = () => '<label>عکس کالا</label><div class="row"><button type="button" id="ig1">🖼️ گالری</button><button type="button" id="ig2">📷 دوربین</button></div>' +
+  '<input id="if1" type="file" accept="image/*" hidden><input id="if2" type="file" accept="image/*" capture="environment" hidden>' +
+  '<img id="ipv2" alt="" style="' + IMG_PV + '">' +
+  '<div class="row"><button type="button" class="ok" id="gw">🪄 پس‌زمینه‌ی سفید و عکس باکیفیت</button></div>' +
+  '<label>دستور هوش مصنوعی (برای جمینی)</label><textarea id="gp" style="min-height:90px;font-size:15px;direction:ltr;text-align:left"></textarea>' +
+  '<div class="row"><button type="button" id="gg">✨ ویرایش با جمینی</button><button type="button" id="gc">📋 کپی پرامپت</button></div>' +
+  '<div class="row"><button type="button" id="gk">🔑 کلید</button></div>' +
+  '<div id="ipw" style="display:none"><label>نتیجه</label><img id="ipn" alt="" style="' + IMG_PV + ';display:block">' +
+  '<div class="row"><button type="button" id="gr">🔄 تلاش دوباره</button><button type="button" class="ok" id="gok">✅ تأیید نهایی عکس</button></div></div>' +
+  '<div class="msg" id="fm"></div>';
+function imgWire(get, set) {
+  let pend = null, mode = "", tries = 0;
+  const msg = (t, ok) => { const m = $("fm"); m.style.color = ok ? "#2a8a3a" : "#ef394e"; m.textContent = t; };
+  const show = () => { const p = $("ipv2"); if (get()) { p.src = get(); p.style.display = "block"; } };
+  const busy = b => { $("gg").disabled = $("gw").disabled = $("gr").disabled = b; };
+  const gkLab = () => { $("gk").textContent = getKey() ? "🔑 کلید ✓" : "🔑 کلید"; };
+  const done = d => { pend = d; $("ipn").src = d; $("ipw").style.display = "block"; busy(false); };
+  $("gp").value = DEF_PROMPT; show(); gkLab();
+  $("ig1").onclick = () => $("if1").click(); $("ig2").onclick = () => $("if2").click();
+  $("if1").onchange = $("if2").onchange = e => { const f = e.target.files[0]; if (f) resizeImg(f, d => { set(d); pend = null; $("ipw").style.display = "none"; show(); msg("عکس انتخاب شد ✓", true); }); e.target.value = ""; };
+  $("gk").onclick = () => { if (askKey()) msg("کلید ذخیره شد ✓", true); gkLab(); };
+  $("gc").onclick = () => copyTxt($("gp").value).then(() => msg("پرامپت کپی شد ✓ حالا در اپ جمینی بچسبان", true), () => msg("کپی نشد؛ متن را دستی انتخاب کن"));
+  const runClean = () => { mode = "clean"; msg(""); busy(true); setTimeout(() => { try { cleanPhoto(get(), (d, rm) => { done(d); msg(rm ? "آماده شد؛ خوب بود تأیید کن، وگرنه تلاش دوباره (با حساسیت دیگر)" : "پس‌زمینه‌ی ساده پیدا نشد؛ فقط روشن و وسط‌چین شد. عکس را روی سطح ساده بگیر.", true); }, tries++); } catch (e) { busy(false); msg("❌ پردازش نشد؛ عکس دیگری امتحان کن"); } }, 30); };
+  const runAI = async () => {
+    if (!getKey() && askKey()) gkLab();
+    mode = "ai"; msg(""); busy(true); $("gg").textContent = "⏳ در حال پردازش...";
+    try { const out = await gemini(get(), $("gp").value.trim() || DEF_PROMPT); shrink(out, d => { done(d); $("gg").textContent = "✨ ویرایش با جمینی"; msg("نتیجه آماده است؛ خوب بود تأیید کن، وگرنه تلاش دوباره", true); }, 800, .85); }
+    catch (e) { busy(false); $("gg").textContent = "✨ ویرایش با جمینی"; msg("❌ " + friendlyErr(e)); }
+  };
+  const need = f => () => { if (!get()) return msg("اول عکس بگیر یا انتخاب کن"); if (get().indexOf("data:") !== 0) return msg("عکس را از گالری یا دوربین انتخاب کن"); f(); };
+  $("gw").onclick = need(() => { tries = 0; runClean(); });
+  $("gg").onclick = need(runAI);
+  $("gr").onclick = need(() => mode === "clean" ? runClean() : runAI());
+  $("gok").onclick = () => { if (!pend) return; set(pend); pend = null; $("ipw").style.display = "none"; show(); msg("عکس نهایی تأیید شد ✓", true); };
+  return () => !!pend;
 }
 function productForm(item) {
   const nw = !item, base = item && isBase(item[0]);
@@ -613,14 +740,15 @@ function productForm(item) {
     '<label>عنوان کالا</label><input id="fn" value="' + (item ? esc(item[0]) : "") + '"' + (base ? " disabled" : "") + '>' +
     '<label>قیمت (تومان؛ صفر = استعلام)</label><input id="fp" inputmode="numeric" value="' + (item ? item[1] : "") + '">' +
     '<label>دسته‌بندی</label><select id="fc">' + CATS.slice(1).map((c, i) => '<option value="' + (i + 1) + '"' + (item && item[2] === i + 1 ? " selected" : "") + '>' + c[1] + ' ' + c[0] + '</option>').join("") + '</select>' +
-    '<label>عکس کالا</label><input id="fi" type="file" accept="image/*"><div class="msg" id="fm"></div>' +
+    imgHTML() +
     '<label>توضیحات</label><textarea id="fd">' + (item ? esc(item[5] || "") : "") + '</textarea>' +
     '<div class="row"><button id="c0">انصراف</button><button class="ok" id="c1">ذخیره</button></div>');
-  $("fi").onchange = e => { const f = e.target.files[0]; if (f) resizeImg(f, d => { img = d; $("fm").style.color = "#2a8a3a"; $("fm").textContent = "عکس انتخاب شد ✓"; }); };
+  const hasPend = imgWire(() => img, v => { img = v; });
   $("c0").onclick = mdClose;
   $("c1").onclick = () => {
     const n = $("fn").value.trim(), p = num($("fp").value), c = +$("fc").value, ds = $("fd").value.trim();
     if (!n) { $("fm").style.color = "#ef394e"; $("fm").textContent = "عنوان را بنویس"; return; }
+    if (hasPend() && !confirm("نتیجه‌ی جمینی هنوز تأیید نشده؛ بدون آن ذخیره شود؟")) return;
     if (base) { OV.mod = OV.mod || {}; OV.mod[item[0]] = { p, img, desc: ds, c }; }
     else if (nw) { OV.add = OV.add || []; OV.add.unshift([n, p, c, CATS[c][1].length ? emojiOf(c) : "🎁", img, ds]); }
     else { const k = OV.add.findIndex(x => x[0] === item[0]); if (k > -1) OV.add[k] = [n, p, c, OV.add[k][3], img, ds]; }
@@ -707,6 +835,7 @@ function ghBox() {
 }
 let pushing = false, pushAgain = false;
 async function pushToGitHub(manual) {
+  try { const k = getKey(); if (k) OV.gk = k; } catch (e) {}
   const c = ghCfg();
   if (!c.token) { if (manual) ghBox(); return false; }
   if (pushing) { pushAgain = true; return false; }
@@ -1284,7 +1413,7 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
 
 
 /* ==== اطلاعات حسابداری: با پنل مدیر و توکن گیت‌هاب خودکار پر می‌شود (دستی ویرایش نکن) ==== */
-const ACC0 = /*ACC_START*/{"cust":[{"id":"mwates4zq7sp","name":"امیرحسین احمدی","phone":"09392184151","note":"تست1","open":0,"m":1794324191534}],"tx":[{"id":"mwbr54aodloh","ts":1794379361280,"src":"sale:1002","type":"in","cust":"mwates4zq7sp","amt":850000,"method":"cash","date":"1405/08/20","desc":"همراه فاکتور فروش ۱۰۰۲","m":1794379555972}],"chk":[],"inv":[{"id":"mwbpq6f41b0a","kind":"sale","no":"1001","ts":1794376984576,"cust":"mwates4zq7sp","name":"امیرحسین احمدی","date":"1405/08/19","total":300000,"data":{"no":"۱۰۰۱","date":"۱۴۰۵/۰۸/۱۹","name":"امیرحسین احمدی","phone":"09392184151","items":[{"n":"ماژیک سی دی ۶۸۲۴","d":"","q":4,"p":75000}],"dt":"pct","dv":0,"tax":0,"valid":3,"note":"از خرید شما سپاسگزاریم.\nجهت هرگونه سؤال یا مرجوعی، این فاکتور را همراه داشته باشید.","card":true,"paid":0,"cust":"mwates4zq7sp","pq":1},"m":1794379241562},{"id":"mwbr54aothk3","kind":"sale","no":"1002","ts":1794379361280,"cust":"mwates4zq7sp","name":"امیرحسین احمدی","date":"1405/08/20","total":1377500,"data":{"no":"۱۰۰۲","date":"۱۴۰۵/۰۸/۲۰","name":"امیرحسین احمدی","phone":"09392184151","items":[{"n":"فلش ۱۶ گیگ","d":"","q":1,"p":1450000}],"dt":"pct","dv":5,"tax":0,"valid":3,"note":"از خرید شما سپاسگزاریم.\nجهت هرگونه سؤال یا مرجوعی، این فاکتور را همراه داشته باشید.","card":true,"paid":850000,"paper":"A5","poem":true,"pq":0,"cust":"mwates4zq7sp"},"m":1794379555972}],"del":["mwaubntbekba"],"u":1794379555972}/*ACC_END*/;
+const ACC0 = /*ACC_START*/{"cust":[{"id":"mwates4zq7sp","name":"امیرحسین احمدی","phone":"09392184151","note":"تست1","open":0,"m":1794322705141}],"tx":[],"chk":[],"inv":[{"id":"mwbpq6f41b0a","kind":"sale","no":"1001","ts":1794376984576,"cust":"mwates4zq7sp","name":"امیرحسین احمدی","date":"1405/08/19","total":225000,"data":{"no":"۱۰۰۱","date":"۱۴۰۵/۰۸/۱۹","name":"امیرحسین احمدی","phone":"09392184151","items":[{"n":"ماژیک سی دی ۶۸۲۴","d":"","q":3,"p":75000}],"dt":"pct","dv":0,"tax":0,"valid":3,"note":"از خرید شما سپاسگزاریم.\nجهت هرگونه سؤال یا مرجوعی، این فاکتور را همراه داشته باشید.","card":true,"paid":0,"cust":"mwates4zq7sp","pq":1},"m":1794377711163}],"del":[],"u":1794377711163}/*ACC_END*/;
 
 /* ===== حسابداری (فقط مدیر): فقط در حافظه‌ی همین مرورگر؛ هیچ‌وقت روی گیت‌هاب نمی‌رود ===== */
 (function () {
