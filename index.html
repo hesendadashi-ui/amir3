@@ -835,7 +835,6 @@ function ghBox() {
 }
 let pushing = false, pushAgain = false, ghOld = "";
 async function pushToGitHub(manual) {
-  try { const k = getKey(); if (k) OV.gk = k; } catch (e) {}
   const c = ghCfg();
   if (!c.token) { if (manual) ghBox(); return false; }
   if (pushing) { pushAgain = true; return false; }
@@ -861,7 +860,7 @@ async function pushToGitHub(manual) {
       if (!re.test(text)) { const r2 = await fetch(file + q, { headers: ghHead(c.token, "application/vnd.github.raw+json") }); if (r2.ok) text = await r2.text(); }
       if (!re.test(text)) { try { const r4 = await fetch(location.href.split("#")[0].split("?")[0] + "?t=" + Date.now(), { cache: "no-store" }); const t4 = await r4.text(); if (re.test(t4)) text = t4; } catch (e4) {} }
       if (!re.test(text)) { const er = new Error("no-marker"); er.info = text.length + " bytes: " + text.slice(0, 40).replace(/\s+/g, " "); throw er; }
-      const json = JSON.stringify(OV).replace(/<\//g, "<\\/");
+      const OVp = Object.assign({}, OV); delete OVp.gk; const json = JSON.stringify(OVp).replace(/<\//g, "<\\/");
       const out = text.replace(re, () => "/*OV_"+"START*/" + json + "/*OV_"+"END*/");
       if (out === text) { toast("✅ همه‌چیز از قبل روی سایت است"); return true; }
       const bytes = new TextEncoder().encode(out); let s = "";
