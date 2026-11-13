@@ -798,6 +798,7 @@ async function exportHTML() {
 /* ===== انتشار خودکار روی گیت‌هاب (فقط با توکنِ ذخیره‌شده در همین مرورگر) ===== */
 const GHK = "ahmadiGH";
 const ghCfg = () => { let c = {}; try { c = JSON.parse(localStorage.getItem(GHK) || "{}"); } catch (e) {} return Object.assign({ owner: "hesendadashi-ui", repo: "amir3", path: "index.html", token: "" }, c); };
+const ghBlob = async (api, sha, tok) => { try { const r = await fetch(api + "/git/blobs/" + sha, { headers: ghHead(tok) }); if (!r.ok) return ""; const j = await r.json(); if (!j.content || j.encoding !== "base64") return ""; const bin = atob(j.content.replace(/\s/g, "")); return new TextDecoder().decode(Uint8Array.from(bin, ch => ch.charCodeAt(0))); } catch (e) { return ""; } };
 const ghHead = (t, accept) => ({ Authorization: "Bearer " + t, Accept: accept || "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" });
 const ghErr = e => { const m = String(e && e.message || e);
   if (m === "401") return "توکن اشتباه است یا منقضی شده";
@@ -857,7 +858,7 @@ async function pushToGitHub(manual) {
       const re = /\/\*OV_START\*\/[\s\S]*?\/\*OV_END\*\//;
       let text = "";
       try { if (j1.content && j1.encoding === "base64") { const bin = atob(j1.content.replace(/\s/g, "")); text = new TextDecoder().decode(Uint8Array.from(bin, ch => ch.charCodeAt(0))); } } catch (e3) {}
-      if (!re.test(text)) { const r2 = await fetch(file + q, { headers: ghHead(c.token, "application/vnd.github.raw+json") }); if (r2.ok) text = await r2.text(); }
+      if (!re.test(text)) { const r2 = await fetch(file + q, { headers: ghHead(c.token, "application/vnd.github.raw+json") }); if (r2.ok) text = await r2.text(); } if (!re.test(text) && j1.sha) { const tb = await ghBlob(api, j1.sha, c.token); if (tb) text = tb; }
       if (!re.test(text)) { try { const r4 = await fetch(location.href.split("#")[0].split("?")[0] + "?t=" + Date.now(), { cache: "no-store" }); const t4 = await r4.text(); if (re.test(t4)) text = t4; } catch (e4) {} }
       if (!re.test(text)) { const er = new Error("no-marker"); er.info = text.length + " bytes: " + text.slice(0, 40).replace(/\s+/g, " "); throw er; }
       const OVp = Object.assign({}, OV); delete OVp.gk; const json = JSON.stringify(OVp).replace(/<\//g, "<\\/");
@@ -1541,7 +1542,7 @@ const ACC0 = /*ACC_START*/{"cust":[{"id":"mwates4zq7sp","name":"امیرحسین
         const r1 = await fetch(file + q, { headers: ghHead(c.token) }); if (!r1.ok) throw new Error(r1.status);
         const j1 = await r1.json(); let text = "";
         try { if (j1.content && j1.encoding === "base64") { const bin = atob(j1.content.replace(/\s/g, "")); text = new TextDecoder().decode(Uint8Array.from(bin, ch => ch.charCodeAt(0))); } } catch (e) {}
-        if (!re.test(text)) { const r2 = await fetch(file + q, { headers: ghHead(c.token, "application/vnd.github.raw+json") }); if (r2.ok) text = await r2.text(); }
+        if (!re.test(text)) { const r2 = await fetch(file + q, { headers: ghHead(c.token, "application/vnd.github.raw+json") }); if (r2.ok) text = await r2.text(); } if (!re.test(text) && j1.sha) { const tb = await ghBlob(api, j1.sha, c.token); if (tb) text = tb; }
         const mm = text.match(re); if (!mm) { const er = new Error("no-marker"); er.info = c.path + " | " + (j1.size || 0) + "B | " + text.length + " chars | " + (j1.encoding || "?") + " | " + (/ACC_START/.test(text) ? "has-ACC-word" : "no-ACC-word") + " | " + br; throw er; }
         let remote = null; try { remote = JSON.parse(mm[1]); } catch (e) {}
         A = merge(A, remote); persist(); if (acc.classList.contains("on")) paint();
