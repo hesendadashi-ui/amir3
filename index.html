@@ -262,7 +262,7 @@ body.sr #spn{display:block;animation:pop .25s}
 #inv .ir1{display:flex;gap:6px;align-items:center}
 #inv .ir1 input{flex:1;font-weight:bold}
 #inv .ir .ix{border:0;background:#ffe3e6;color:#ef394e;border-radius:10px;width:38px;height:38px;font-size:17px;cursor:pointer;flex:none}
-#inv .ir .in-d{margin-top:6px;font-size:16px;padding:5px 10px}
+#inv .ir .in-d{margin-top:6px;font-size:16px;padding:6px 10px;width:100%;box-sizing:border-box;min-height:56px;resize:vertical;font-family:inherit;border:1px solid #d9deee;border-radius:10px}.ir .in-c{flex:none!important;width:74px!important;min-width:0;text-align:center;font-weight:normal!important;font-size:15px}.ir4{display:flex;gap:6px;align-items:center;margin-top:6px}.ir4 label{flex:none;font-size:15px;color:#ef394e}.ir4 input{flex:1;min-width:0}.ir4 select{flex:none;width:96px!important}.ir4 input{width:auto!important}.hn{margin-top:6px;font-size:14px;color:var(--muted)}.fx{border:0;background:#e8eefb;color:var(--p);border-radius:8px;padding:3px 8px;font:inherit;font-size:14px;cursor:pointer}
 #inv .ir3{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:end}
 #inv .qt{display:flex;align-items:center;gap:4px}
 #inv .qt button{width:34px;height:40px;border:0;border-radius:10px;background:var(--gray);font-size:20px;cursor:pointer;color:var(--text)}
@@ -339,6 +339,7 @@ body.sr #spn{display:block;animation:pop .25s}
 #acc .abar:empty{display:none}
 #acc .abar button{flex:1;border:0;border-radius:14px;padding:10px;font:inherit;font-size:18px;cursor:pointer;background:var(--p);color:#fff;box-shadow:0 6px 16px #1c4fb855}
 
+.cd{font-size:12px;color:var(--muted);margin-top:1px}
 /* رنگ بخش‌ها: لوازم‌التحریر زرد، کافی‌نت سبز، طراحی آبی، کامپیوتری قرمز */
 #shop{--sc:#ffc928;--st:#fff6d6}#cafe{--sc:#22b573;--st:#dff6ea}#dsg{--sc:#1c6fe0;--st:#e1ecfd}#comp{--sc:#ef394e;--st:#ffe3e6}
 section h2:before{background:var(--sc)!important}
@@ -456,12 +457,14 @@ $("fg").innerHTML = [
 /* منوی همبرگری */
 $("dr").innerHTML = `<div class="top"><div class="brand"><img class="lg" alt="">احمدی</div><button class="ib" id="cl" aria-label="بستن"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <h4>بخش‌ها</h4><a href="#shop" class="cl">✏️ لوازم‌التحریر</a><a href="#cafe" class="cl">☕ کافی‌نت</a><a href="#comp" class="cl">💻 کامپیوتری</a><a href="#dsg" class="cl">📐 طراحی</a>` +
+`<h4>لیست قیمت</h4><button class="l" data-list>📋 لیست کامل کالاها و خدمات</button>` +
 `<h4>ارتباط با ما</h4><a href="#contact" class="cl">📞 تماس و راه‌های ارتباطی</a><a href="#about" class="cl">🏪 درباره ما</a>`;
 document.querySelectorAll(".lg").forEach(i => i.src = LOGO);
 const open = v => document.body.classList.toggle("o", v);
 $("hb").onclick = () => open(true); $("ov").onclick = () => open(false); $("cl").onclick = () => open(false);
 $("dr").onclick = e => {
   if(e.target.closest(".cl")) open(false);
+  if(e.target.closest("[data-list]")){ open(false); window.listOpen && window.listOpen(); return; }
   const b = e.target.closest("[data-cat]"); if(!b) return;
   setCat(+b.dataset.cat); open(false); $("shop").scrollIntoView();
 };
@@ -469,7 +472,7 @@ $("dr").onclick = e => {
 function render(){
   renderSvc(); infoTick();
   const q = norm($("q").value.trim());
-  const ALL = ITEMS().filter(d => norm(d[0]).includes(q)), by = c => ALL.filter(d => d[2] === c);
+  const qd = cdn($("q").value.trim()), ALL = ITEMS().filter(d => norm(d[0]).includes(q) || (/^\d+$/.test(qd) && cdn(d[7]).includes(qd))), by = c => ALL.filter(d => d[2] === c);
   const list = by(1); window.__LS = { 1: list, 2: by(2), 3: by(3), 4: by(4) }; $("cnt").textContent = fa(list.length) + " کالا";
   const mk = (d, ix, L) => {
     const k = DK[d[6] || d[0]], shop = d[1];
@@ -478,7 +481,7 @@ function render(){
     if(k && k.p){
       r1 = (shop && shop < k.p ? `<span class="off">${fa(Math.round((1 - shop / k.p) * 100))}٪</span>` : "") + `<span>دیجی‌کالا <s>${fa(k.p)}</s></span>`;
     }
-    return `<div class="card" data-n="${ix}" data-l="${L}"><div class="adc"><button data-e title="ویرایش">✏️</button><button data-d title="حذف">🗑️</button></div><div class="ph">${iconFor(d)}${img}</div><div class="nm">${d[0]}</div>` +
+    return `<div class="card" data-n="${ix}" data-l="${L}"><div class="adc"><button data-e title="ویرایش">✏️</button><button data-d title="حذف">🗑️</button></div><div class="ph">${iconFor(d)}${img}</div><div class="nm">${d[0]}</div>${d[7] ? `<div class="cd">کد ${cdf(d[7])}</div>` : ""}` +
       `<div class="pr"><div class="r1">${r1}</div><div class="now">${shop ? `<b>${fa(shop)}</b> تومان` : `<b class="q">استعلام قیمت</b>`}</div></div></div>`;
   };
   const NF = "<p style='padding:14px'>موردی پیدا نشد.</p>";
@@ -633,10 +636,12 @@ function ITEMS() {
   const base = DATA.filter(d => !del.has(d[0])).map(d => {
     const m = (OV.mod || {})[d[0]];
     let p = m && m.p != null ? m.p : d[1]; if (!p && d[2] === 4 && DK[d[0]]) p = Math.round(DK[d[0]].p * (1 + MARKUP / 100) / 1000) * 1000;
-    return [m && m.n || d[0], p, m && m.c != null ? m.c : d[2], d[3], m && m.img || "", m && m.desc || "", d[0]];
+    return [m && m.n || d[0], p, m && m.c != null ? m.c : d[2], d[3], m && m.img || "", m && m.desc || "", d[0], m && m.code || String(1001 + DATA.indexOf(d))];
   });
-  return base.concat(OV.add || []).sort((a, b) => norm(a[0]).localeCompare(norm(b[0]), "fa"));
+  return base.concat((OV.add || []).map(x => { const y = x.slice(); y[6] = y[6] || null; y[7] = y[7] || ""; return y; })).sort((a, b) => norm(a[0]).localeCompare(norm(b[0]), "fa"));
 }
+const cdn = v => String(v == null ? "" : v).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)), cdf = v => String(v == null ? "" : v).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
+const nextCode = () => String(Math.max(1000 + DATA.length, ...ITEMS().map(x => parseInt(cdn(x[7])) || 0)) + 1);
 const isBase = n => DATA.some(d => d[0] === n);
 const mdBox = h => { $("md").innerHTML = '<div class="box">' + h + '</div>'; $("md").classList.add("on"); };
 const mdClose = () => $("md").classList.remove("on");
@@ -785,6 +790,7 @@ function productForm(item) {
   let img = item ? item[4] || "" : "";
   mdBox('<h3>' + (nw ? "➕ افزودن کالای جدید" : "✏️ ویرایش کالا") + '</h3>' +
     '<label>عنوان کالا</label><input id="fn" value="' + (item ? esc(item[0]) : "") + '">' +
+    '<label>کد کالا</label><input id="fcode" inputmode="numeric" value="' + esc(cdf(item ? item[7] : nextCode())) + '">' +
     '<label>قیمت (تومان؛ صفر = استعلام)</label><input id="fp" inputmode="numeric" value="' + (item ? item[1] : "") + '">' +
     '<label>دسته‌بندی</label><select id="fc">' + CATS.slice(1).map((c, i) => '<option value="' + (i + 1) + '"' + (item && item[2] === i + 1 ? " selected" : "") + '>' + CDOT[i + 1] + ' ' + c[1] + ' ' + c[0] + '</option>').join("") + '</select>' +
     imgHTML() +
@@ -793,12 +799,12 @@ function productForm(item) {
   const hasPend = imgWire(() => img, v => { img = v; });
   $("c0").onclick = mdClose;
   $("c1").onclick = () => {
-    const n = $("fn").value.trim(), p = num($("fp").value), c = +$("fc").value, ds = $("fd").value.trim();
+    const n = $("fn").value.trim(), p = num($("fp").value), c = +$("fc").value, ds = $("fd").value.trim(), code = cdn($("fcode").value.trim());
     if (!n) { $("fm").style.color = "#ef394e"; $("fm").textContent = "عنوان را بنویس"; return; }
     if (hasPend() && !confirm("نتیجه‌ی جمینی هنوز تأیید نشده؛ بدون آن ذخیره شود؟")) return;
-    if (base) { OV.mod = OV.mod || {}; OV.mod[key] = { p, img, desc: ds, c }; if (n !== key) OV.mod[key].n = n; }
-    else if (nw) { OV.add = OV.add || []; OV.add.unshift([n, p, c, CATS[c][1].length ? emojiOf(c) : "🎁", img, ds]); }
-    else { const k = OV.add.findIndex(x => x[0] === item[0]); if (k > -1) OV.add[k] = [n, p, c, OV.add[k][3], img, ds]; }
+    if (base) { OV.mod = OV.mod || {}; OV.mod[key] = { p, img, desc: ds, c, code }; if (n !== key) OV.mod[key].n = n; }
+    else if (nw) { OV.add = OV.add || []; OV.add.unshift([n, p, c, CATS[c][1].length ? emojiOf(c) : "🎁", img, ds, null, code]); }
+    else { const k = OV.add.findIndex(x => x[0] === item[0]); if (k > -1) OV.add[k] = [n, p, c, OV.add[k][3], img, ds, null, code]; }
     saveOV(); mdClose(); render();
   };
 }
@@ -940,9 +946,9 @@ function showItem(it) {
 }
 /* نوار ابزار مدیر */
 const bar = document.createElement("div"); bar.id = "adm";
-bar.innerHTML = '<button id="a1">➕ کالای جدید</button><button id="a2" class="y">💰 ویرایش قیمت</button><button id="a7">📋 لیست کامل</button><button id="a3">🚀 انتشار روی سایت</button><button id="a5" class="y">⚙️ گیت‌هاب</button><button id="a6">⬇️ دانلود فایل</button><button id="a4" class="x">خروج</button>';
+bar.innerHTML = '<button id="a1">➕ کالای جدید</button><button id="a2" class="y">💰 ویرایش قیمت</button><button id="a3">🚀 انتشار روی سایت</button><button id="a5" class="y">⚙️ گیت‌هاب</button><button id="a6">⬇️ دانلود فایل</button><button id="a4" class="x">خروج</button>';
 document.body.appendChild(bar);
-$("a7").onclick = () => window.listOpen && window.listOpen(); $("a1").onclick = () => productForm(null); $("a2").onclick = pctBox; $("a3").onclick = () => pushToGitHub(true); $("a5").onclick = ghBox; $("a6").onclick = exportHTML; $("a4").onclick = () => setAdmin(false);
+$("a1").onclick = () => productForm(null); $("a2").onclick = pctBox; $("a3").onclick = () => pushToGitHub(true); $("a5").onclick = ghBox; $("a6").onclick = exportHTML; $("a4").onclick = () => setAdmin(false);
 /* ورود مدیر: پاورقی و منو */
 const lk = document.createElement("div"); lk.style.cssText = "text-align:center;margin-top:14px";
 lk.innerHTML = '<a href="#" id="lg" style="color:var(--muted);font-size:15px">🔒 ورود مدیر</a>'; document.querySelector("footer .w").appendChild(lk);
@@ -1133,7 +1139,9 @@ addEventListener("scroll", () => { if (!tk) tk = requestAnimationFrame(prog); },
   const load = m => { let o = null; try { o = JSON.parse(lsGet(KEYS[m]) || "null"); } catch (e) {} return o && Array.isArray(o.items) ? o : blank(m, lastNo(m) + 1); };
   let MODE = "pro", IV = load("pro");
   const save = () => { if (IV.ed) return; lsSet(KEYS[MODE], JSON.stringify(IV)); };
-  const lineT = x => Math.round((x.q || 0) * (x.p || 0));
+  const lineG = x => Math.round((x.q || 0) * (x.p || 0));
+  const lineD = x => { const g = lineG(x), v = Math.max(x.dv || 0, 0); return x.dt === "amt" ? Math.min(Math.round(v), g) : Math.round(g * Math.min(v, 100) / 100); };
+  const lineT = x => lineG(x) - lineD(x);
 
   /* مبلغ به حروف */
   const ON = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"], TN = ["ده", "یازده", "دوازده", "سیزده", "چهارده", "پانزده", "شانزده", "هفده", "هجده", "نوزده"],
@@ -1203,10 +1211,12 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
     im.onload = () => { clearTimeout(tm); res(im.naturalWidth ? im : null); }; im.onerror = () => { clearTimeout(tm); res(null); }; im.src = u;
   });
 
-  const rowH = (x, i) => `<div class="ir${x.p ? "" : " z"}" data-i="${i}"><div class="ir1"><input class="in-n" value="${esc(x.n)}" placeholder="نام کالا / خدمت" autocomplete="off"><button class="ix" data-del aria-label="حذف">🗑️</button></div>
-<input class="in-d" value="${esc(x.d || "")}" placeholder="شرح (اختیاری): رنگ، مدل، توضیح کار..." autocomplete="off">
+  const rowH = (x, i) => `<div class="ir${x.p ? "" : " z"}" data-i="${i}"><div class="ir1"><input class="in-n" value="${esc(x.n)}" placeholder="نام کالا / خدمت" autocomplete="off"><input class="in-c" value="${esc(cdf(x.c || ""))}" placeholder="کد" inputmode="numeric" autocomplete="off"><button class="ix" data-del aria-label="حذف">🗑️</button></div>
+<textarea class="in-d" rows="2" placeholder="شرح (اختیاری): رنگ، مدل، مشخصات، توضیح کار..." autocomplete="off">${esc(x.d || "")}</textarea>
 <div class="ir3"><div><label>تعداد</label><div class="qt"><button data-m>−</button><input class="in-q" inputmode="decimal" value="${esc(fd(x.q))}"><button data-p>+</button></div></div><div><label>قیمت واحد (تومان)</label><input class="in-p" inputmode="numeric" value="${x.p ? fa(x.p) : ""}" placeholder="۰"></div></div>
-<div class="lt">جمع ردیف: <b data-lt>${fa(lineT(x))}</b> تومان</div></div>`;
+<div class="ir4"><label>تخفیف همین ردیف</label><input class="in-x" inputmode="decimal" value="${x.dv ? (x.dt === "amt" ? fa(x.dv) : fd(x.dv)) : ""}" placeholder="۰"><select class="in-xt"><option value="pct"${x.dt === "amt" ? "" : " selected"}>درصد ٪</option><option value="amt"${x.dt === "amt" ? " selected" : ""}>تومان</option></select></div>
+${x.ref ? `<div class="hn">نام فقط برای همین فاکتور عوض می‌شود. <button class="fx" data-fix>📌 ثبت این نام برای همیشه در کالاها</button></div>` : ""}
+<div class="lt">${lineD(x) ? `<s>${fa(lineG(x))}</s> ` : ""}جمع ردیف: <b data-lt>${fa(lineT(x))}</b> تومان</div></div>`;
 
   function renderRows() {
     $("ilist").innerHTML = IV.items.length ? IV.items.map(rowH).join("") : '<p class="ie">هنوز ردیفی اضافه نشده؛ از کادر بالا کالا یا خدمت را جستجو و انتخاب کن.</p>';
@@ -1221,18 +1231,18 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
       (PAYOK() && T.paid ? `<div class="sr"><span>${MODES[MODE].pay}</span><b>${fa(T.paid)} تومان</b></div><div class="sr d"><span>مانده</span><b>${fa(T.rest)} تومان</b></div>` : "") +
       (T.total ? `<div class="wd">به حروف: ${words(T.total)} تومان</div>` : "");
   }
-  function addItem(n, p) {
+  function addItem(n, p, ref, code) {
     const f = IV.items.find(x => x.n === n && x.p === p);
-    if (f) f.q = (f.q || 0) + 1; else IV.items.push({ n, d: "", q: 1, p });
+    if (f) f.q = (f.q || 0) + 1; else IV.items.push({ n, d: "", q: 1, p, c: code || "", ref: ref || "" });
     save(); renderRows(); toast("✓ اضافه شد: " + n);
   }
   function search(q) {
     q = norm(q.trim()); if (!q) { PR = []; $("ipr").innerHTML = ""; return; }
     const out = [];
-    ITEMS().forEach(d => { if (norm(d[0]).includes(q)) out.push({ n: d[0], p: d[1] || 0, t: "🛒" }); });
+    const qd = cdn(q); ITEMS().forEach(d => { if (norm(d[0]).includes(q) || (/^\d+$/.test(qd) && cdn(d[7]).includes(qd))) out.push({ n: d[0], p: d[1] || 0, t: "🛒", c: d[7], ref: d[6] || d[0] }); });
     GROUPS.forEach(g => g[1].forEach(s => { if (norm(s[1]).includes(q)) out.push({ n: s[1], p: sP(s) || 0, t: "🛠️" }); }));
     PR = out.slice(0, 30);
-    $("ipr").innerHTML = PR.map((x, i) => `<button class="ipi" data-add="${i}"><span>${x.t} ${esc(x.n)}</span><em>${MODE === "buy" ? "قیمت خرید را بنویس" : x.p ? fa(x.p) + " تومان" : "قیمت را بنویس"}</em></button>`).join("") || '<p class="ie">موردی پیدا نشد؛ «ردیف دلخواه» را بزن.</p>';
+    $("ipr").innerHTML = PR.map((x, i) => `<button class="ipi" data-add="${i}"><span>${x.t} ${esc(x.n)}${x.c ? " <small style='color:#81858b'>کد " + cdf(x.c) + "</small>" : ""}</span><em>${MODE === "buy" ? "قیمت خرید را بنویس" : x.p ? fa(x.p) + " تومان" : "قیمت را بنویس"}</em></button>`).join("") || '<p class="ie">موردی پیدا نشد؛ «ردیف دلخواه» را بزن.</p>';
   }
 
   inv.addEventListener("input", e => {
@@ -1241,6 +1251,9 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
       const x = IV.items[+row.dataset.i]; if (!x) return;
       if (el.classList.contains("in-n")) x.n = el.value;
       else if (el.classList.contains("in-d")) x.d = el.value;
+      else if (el.classList.contains("in-c")) x.c = cdn(el.value);
+      else if (el.classList.contains("in-x")) { x.dv = x.dt === "amt" ? num(el.value) : Math.min(100, qn(el.value)); if (x.dt === "amt") el.value = x.dv ? fa(x.dv) : ""; }
+      else if (el.classList.contains("in-xt")) { x.dt = el.value; x.dv = 0; renderRows(); save(); return; }
       else if (el.classList.contains("in-q")) x.q = qn(el.value);
       else if (el.classList.contains("in-p")) { x.p = num(el.value); el.value = x.p ? fa(x.p) : ""; row.classList.toggle("z", !x.p); }
       row.querySelector("[data-lt]").textContent = fa(lineT(x));
@@ -1279,13 +1292,22 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
     if (b.dataset.mode) { switchMode(b.dataset.mode); return; }
     if (b.id === "icopy") return copyCalc();
     if (b.id === "itopro") return toPro();
-    if (b.dataset.add != null) { const r = PR[+b.dataset.add]; if (r) { addItem(r.n, MODE === "buy" ? 0 : r.p); $("ipq").value = ""; search(""); } return; }
+    if (b.dataset.add != null) { const r = PR[+b.dataset.add]; if (r) { addItem(r.n, MODE === "buy" ? 0 : r.p, r.ref, r.c); $("ipq").value = ""; search(""); } return; }
     if (b.id === "icust") { IV.items.push({ n: "", d: "", q: 1, p: 0 }); save(); renderRows(); const ins = inv.querySelectorAll(".in-n"); ins[ins.length - 1].focus(); return; }
     if (b.id === "inew") { if (!confirm(MODE === "calc" ? "همه‌ی اقلام پاک شود؟" : MODES[MODE].t + " فعلی پاک شود و مورد جدید شروع شود؟")) return; const n = Math.max(lastNo(MODE), num(IV.no)); lsSet(NOK(MODE), String(n)); IV = blank(MODE, n + 1); save(); build(); inv.scrollTop = 0; return; }
     if (b.id === "igo") return makeImage();
     if (b.id === "isv") return saveInv();
     if (b.id === "ipdice") { IV.pq = (IV.pq || 0) + 1; save(); showPq(); return; }
     if (!x) return;
+    if (b.hasAttribute("data-fix")) {
+      const nn = (x.n || "").trim(); if (!nn || !x.ref) return;
+      if (!ADMIN) { toast("برای تغییر دائمی نام باید وارد حالت مدیر باشی"); return; }
+      const it = ITEMS().find(d => (d[6] || d[0]) === x.ref); if (!it) { toast("کالا در لیست پیدا نشد"); return; }
+      if (it[0] === nn) { toast("این نام همین الان در کالاها هست"); return; }
+      if (isBase(x.ref)) { OV.mod = OV.mod || {}; OV.mod[x.ref] = Object.assign({}, OV.mod[x.ref], { n: nn }); }
+      else { const k = (OV.add || []).findIndex(a => a[0] === x.ref); if (k < 0) return; OV.add[k] = [nn].concat(OV.add[k].slice(1)); x.ref = nn; }
+      saveOV(); render(); save(); toast("✅ نام کالا برای همیشه عوض شد"); return;
+    }
     if (b.hasAttribute("data-del")) { IV.items.splice(+row.dataset.i, 1); save(); renderRows(); }
     else if (b.hasAttribute("data-m") || b.hasAttribute("data-p")) { x.q = Math.max(0, (x.q || 0) + (b.hasAttribute("data-p") ? 1 : -1)); row.querySelector(".in-q").value = fd(x.q); row.querySelector("[data-lt]").textContent = fa(lineT(x)); updTotals(); save(); }
   });
@@ -1347,8 +1369,8 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
   function draw(items, logo, pics) {
     const T = totals(), M = MODES[MODE], W = 1000, P = 1414, L = "‎", paper = paperOf();
     const mc = document.createElement("canvas").getContext("2d"); mc.direction = "rtl";
-    const hasPic = !!(pics && pics.some(Boolean)), NR = hasPic ? 816 : 894, NW = NR - 512;
-    const rows = items.map((x, i) => { mc.font = "bold 22px " + FF; const nl = wrapL(mc, x.n || "—", NW); mc.font = "18px " + FF; const dl = (x.d || "").trim() ? wrapL(mc, x.d, NW) : []; return { x, nl, dl, pic: pics && pics[i] || null, h: Math.max(hasPic ? 64 : 44, 14 + nl.length * 29 + dl.length * 24), y: 0 }; });
+    const hasPic = !!(pics && pics.some(Boolean)), hasCode = items.some(x => x.c), NR = hasPic ? 816 : 894, NW = NR - (hasCode ? 600 : 512);
+    const rows = items.map((x, i) => { mc.font = "bold 22px " + FF; const nl = wrapL(mc, x.n || "—", NW); mc.font = "18px " + FF; const dl = (x.d || "").trim() ? wrapL(mc, x.d, NW) : []; const dd = lineD(x) ? "تخفیف ردیف: " + (x.dt === "amt" ? "" : fa(x.dv) + "٪ ") + "(−" + fa(lineD(x)) + " تومان)" : ""; return { x, nl, dl, dd, pic: pics && pics[i] || null, h: Math.max(hasPic ? 64 : 44, 14 + nl.length * 29 + (dl.length + (dd ? 1 : 0)) * 24), y: 0 }; });
     const wordsTxt = words(T.total) ? words(T.total) + " تومان" : "";
     mc.font = "bold 20px " + FF; const wl = wordsTxt ? wrapL(mc, wordsTxt, 460) : [];
     mc.font = "19px " + FF; const nl2 = (IV.note || "").trim() ? wrapL(mc, IV.note, 460) : [];
@@ -1404,7 +1426,7 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
       rr(40, hy, 920, HH, 10); c.fillStyle = "#1c4fb8"; c.fill();
       const ty = hy + 27, f = "bold 18px " + FF;
       tx("ردیف", 932, ty, f, "#fff", "center"); tx("شرح کالا / خدمات", 890, ty, f, "#fff");
-      tx("تعداد", 459, ty, f, "#fff", "center"); tx("قیمت واحد (تومان)", 334, ty, f, "#fff", "center"); tx("مبلغ (تومان)", 147, ty, f, "#fff", "center");
+      if (hasCode) tx("کد", 556, ty, f, "#fff", "center"); tx("تعداد", 459, ty, f, "#fff", "center"); tx("قیمت واحد (تومان)", 334, ty, f, "#fff", "center"); tx("مبلغ (تومان)", 147, ty, f, "#fff", "center");
     });
     rows.forEach((r, i) => {
       const y = r.y;
@@ -1414,8 +1436,10 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
       if (r.pic) { const bs = 50, bx = 826, by = y + (r.h - bs) / 2, pw = r.pic.naturalWidth, ph = r.pic.naturalHeight, k = Math.min(bs / pw, bs / ph);
         c.save(); rr(bx, by, bs, bs, 8); c.fillStyle = "#fff"; c.fill(); c.clip(); c.drawImage(r.pic, bx + (bs - pw * k) / 2, by + (bs - ph * k) / 2, pw * k, ph * k); c.restore();
         rr(bx, by, bs, bs, 8); c.strokeStyle = "#e3e8f5"; c.lineWidth = 1.5; c.stroke(); }
-      let ty = y + Math.max(8, (r.h - (r.nl.length * 29 + r.dl.length * 24)) / 2) + 21; r.nl.forEach(s => { tx(s, NR, ty, "bold 22px " + FF, "#23254e"); ty += 29; });
+      let ty = y + Math.max(8, (r.h - (r.nl.length * 29 + (r.dl.length + (r.dd ? 1 : 0)) * 24)) / 2) + 21; r.nl.forEach(s => { tx(s, NR, ty, "bold 22px " + FF, "#23254e"); ty += 29; });
       r.dl.forEach(s => { tx(s, NR, ty - 3, "18px " + FF, "#6b6f7a"); ty += 24; });
+      if (r.dd) { tx(r.dd, NR, ty - 3, "bold 17px " + FF, "#ef394e"); ty += 24; }
+      if (hasCode) tx(r.x.c ? cdf(r.x.c) : "", 556, y + r.h / 2 + 7, "19px " + FF, "#6b6f7a", "center");
       const my = y + r.h / 2 + 7;
       tx(fa(r.x.q || 0), 459, my, "22px " + FF, "#23254e", "center");
       tx(r.x.p ? fa(r.x.p) : "—", 334, my, "22px " + FF, "#23254e", "center");
@@ -1515,36 +1539,35 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
     if (canShareImg) $("psh").onclick = () => navigator.share({ files: imgFiles, title: ttl }).catch(() => {});
     if (canSharePdf) $("pshp").onclick = () => { try { navigator.share({ files: [new File([getPdf()], base + ".pdf", { type: "application/pdf" })], title: ttl }).catch(() => {}); } catch (e) {} };
   }
-  /* ---------- لیست کامل کالاها و خدمات (برای خود مدیر): پیش‌نمایش، عکس، PDF و Excel ---------- */
+  /* ---------- لیست کامل کالاها و خدمات: تک‌ستونی، با کد کالا؛ پیش‌نمایش، عکس، PDF و Excel ---------- */
   const LSEC = [{ n: "لوازم‌التحریر", c: 1, col: "#ffc928", tc: "#23254e", g: [] }, { n: "کافی‌نت", c: 2, col: "#22b573", tc: "#fff", g: [0, 1, 2] }, { n: "کامپیوتری", c: 4, col: "#ef394e", tc: "#fff", g: [3, 4, 5] }, { n: "طراحی", c: 3, col: "#1c6fe0", tc: "#fff", g: [6] }];
   function listData() {
     const its = ITEMS(), out = [];
     LSEC.forEach(S => { const groups = [];
-      S.g.forEach(gi => { const g = GROUPS[gi]; if (g) groups.push({ t: g[0], rows: g[1].map(s => ({ n: s[1], p: sP(s), d: "" })) }); });
-      const rows = its.filter(x => x[2] === S.c).map(x => ({ n: x[0], p: x[1], d: (x[5] || "").trim() }));
-      if (rows.length) groups.push({ t: S.c === 1 ? "کالاها (به ترتیب الفبا)" : "کالاها (به ترتیب الفبا)", rows });
+      S.g.forEach(gi => { const g = GROUPS[gi]; if (g) groups.push({ t: g[0], rows: g[1].map(s => ({ n: s[1], p: sP(s), d: "", c: "" })) }); });
+      const rows = its.filter(x => x[2] === S.c).map(x => ({ n: x[0], p: x[1], d: (x[5] || "").trim(), c: x[7] || "" }));
+      if (rows.length) groups.push({ t: "کالاها (به ترتیب الفبا)", rows });
       if (groups.length) out.push({ S, groups }); });
     return out;
   }
   function listCsv() {
     const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-    const lines = [["بخش", "دسته", "نام", "مشخصات", "قیمت (تومان)"].map(q).join(",")];
-    listData().forEach(B => B.groups.forEach(g => g.rows.forEach(r => lines.push([B.S.n, g.t, r.n, r.d, r.p || "استعلام"].map(q).join(",")))));
+    const lines = [["بخش", "دسته", "کد کالا", "نام", "مشخصات", "قیمت (تومان)"].map(q).join(",")];
+    listData().forEach(B => B.groups.forEach(g => g.rows.forEach(r => lines.push([B.S.n, g.t, r.c, r.n, r.d, r.p || "استعلام"].map(q).join(",")))));
     const b = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" }), u = URL.createObjectURL(b), a = document.createElement("a");
     a.href = u; a.download = "price-list.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000);
   }
   function listOpen() {
     const data = listData(); if (!data.length) { toast("لیستی برای نمایش نیست"); return; }
     toast("در حال ساخت لیست...");
-    const W = 1000, P = 1414, TOPY = 120, BOT = P - 44, CW = 450, XR = 960, mc = document.createElement("canvas").getContext("2d"); mc.direction = "rtl";
-    const els = []; data.forEach(B => { els.push({ k: "s", B, h: 44 });
-      B.groups.forEach(g => { els.push({ k: "g", B, t: g.t, h: 32 });
-        g.rows.forEach(r => { mc.font = "bold 18px " + FF; const nl = wrapL(mc, r.n, CW - 130); mc.font = "15px " + FF; const dl = r.d ? wrapL(mc, r.d, CW - 20) : []; els.push({ k: "r", B, r, nl, dl, h: 8 + nl.length * 24 + dl.length * 20 }); }); }); });
-    const pagesL = []; let pg = { items: [] }, col = 0, y = TOPY; pagesL.push(pg);
-    const next = () => { if (col === 0) { col = 1; y = TOPY; } else { pg = { items: [] }; pagesL.push(pg); col = 0; y = TOPY; } };
+    const W = 1000, P = 1414, TOPY = 112, BOT = P - 44, XR = 960, XL = 40, NR = 880, NW = 560, mc = document.createElement("canvas").getContext("2d"); mc.direction = "rtl";
+    const els = []; data.forEach(B => { els.push({ k: "s", B, h: 46 });
+      B.groups.forEach(g => { els.push({ k: "g", B, t: g.t, h: 34 });
+        g.rows.forEach(r => { mc.font = "bold 19px " + FF; const nl = wrapL(mc, r.n, NW); mc.font = "16px " + FF; const dl = r.d ? wrapL(mc, r.d, NW) : []; els.push({ k: "r", B, r, nl, dl, h: Math.max(36, 12 + nl.length * 25 + dl.length * 21) }); }); }); });
+    const pagesL = []; let pg = { items: [] }, y = TOPY; pagesL.push(pg);
     els.forEach((e, i) => { let need = e.h; if (e.k === "s") need += (els[i + 1] ? els[i + 1].h : 0) + (els[i + 2] ? els[i + 2].h : 0); else if (e.k === "g") need += els[i + 1] ? els[i + 1].h : 0;
-      if (y + need > BOT) next();
-      pg.items.push({ e, col, y }); y += e.h; });
+      if (y + need > BOT) { pg = { items: [] }; pagesL.push(pg); y = TOPY; }
+      pg.items.push({ e, y }); y += e.h; });
     const cvs = pagesL.map((pgL, pi) => {
       const cv = document.createElement("canvas"); cv.width = W * 1.5; cv.height = P * 1.5; const c = cv.getContext("2d"); c.scale(1.5, 1.5); c.direction = "rtl"; c.textBaseline = "alphabetic";
       const tx = (s, x, y, font, col, al) => { c.font = font; c.fillStyle = col; c.textAlign = al || "right"; c.fillText(s, x, y); };
@@ -1554,15 +1577,16 @@ ${custPick()}<div class="ig"><div><label>شماره تماس</label><input id="i
       tx(SHOP, 960, 36, "bold 28px " + FF, "#fff"); tx("لیست کامل کالاها و خدمات", 960, 64, "bold 20px " + FF, "#ffc928");
       tx(today(), 40, 46, "19px " + FF, "#fff", "left");
       tx("صفحه " + fd(pi + 1) + " از " + fd(pagesL.length), W / 2, P - 14, "15px " + FF, "#81858b", "center");
-      c.strokeStyle = "#e3e8f5"; c.lineWidth = 1.5; c.beginPath(); c.moveTo(W / 2, TOPY - 6); c.lineTo(W / 2, BOT); c.stroke();
-      pgL.items.forEach(({ e, col, y }) => {
-        const xr = col === 0 ? XR : 490, xl = xr - CW, S = e.B.S;
-        if (e.k === "s") { box(xl, y + 2, CW, 38, 10, S.col); tx(S.n, xr - 12, y + 29, "bold 22px " + FF, S.tc); return; }
-        if (e.k === "g") { box(xl, y + 2, CW, 26, 7, S.col + "38"); c.fillStyle = S.col; c.fillRect(xr - 5, y + 2, 5, 26); tx(e.t, xr - 14, y + 21, "bold 16px " + FF, "#23254e"); return; }
-        let ty = y + 22; e.nl.forEach(s => { tx(s, xr - 6, ty, "bold 18px " + FF, "#23254e"); ty += 24; });
-        e.dl.forEach(s => { tx(s, xr - 6, ty - 2, "15px " + FF, "#6b6f7a"); ty += 20; });
-        tx(e.r.p ? fa(e.r.p) : "استعلام", xl + 6, y + 22, "bold 17px " + FF, e.r.p ? "#1c4fb8" : "#9aa3bd", "left");
-        c.strokeStyle = "#eef1f8"; c.lineWidth = 1; c.beginPath(); c.moveTo(xl, y + e.h); c.lineTo(xr, y + e.h); c.stroke();
+      tx("کد", XR - 6, 102, "bold 15px " + FF, "#9aa3bd"); tx("نام کالا / خدمت و مشخصات", NR, 102, "bold 15px " + FF, "#9aa3bd"); tx("قیمت (تومان)", XL + 6, 102, "bold 15px " + FF, "#9aa3bd", "left");
+      pgL.items.forEach(({ e, y }) => {
+        const S = e.B.S;
+        if (e.k === "s") { box(XL, y + 3, 920, 38, 10, S.col); tx(S.n, XR - 14, y + 30, "bold 23px " + FF, S.tc); return; }
+        if (e.k === "g") { box(XL, y + 3, 920, 27, 7, S.col + "38"); c.fillStyle = S.col; c.fillRect(XR - 5, y + 3, 5, 27); tx(e.t, XR - 14, y + 22, "bold 16px " + FF, "#23254e"); return; }
+        tx(e.r.c ? cdf(e.r.c) : "", XR - 6, y + 25, "16px " + FF, "#81858b");
+        let ty = y + 24; e.nl.forEach(s => { tx(s, NR, ty, "bold 19px " + FF, "#23254e"); ty += 25; });
+        e.dl.forEach(s => { tx(s, NR, ty - 3, "16px " + FF, "#6b6f7a"); ty += 21; });
+        tx(e.r.p ? fa(e.r.p) : "استعلام", XL + 6, y + 25, "bold 18px " + FF, e.r.p ? "#1c4fb8" : "#9aa3bd", "left");
+        c.strokeStyle = "#eef1f8"; c.lineWidth = 1; c.beginPath(); c.moveTo(XL, y + e.h); c.lineTo(XR, y + e.h); c.stroke();
       });
       return cv; });
     preview(cvs, cvs.length, "A4", { base: "price-list", title: "لیست قیمت", csv: listCsv });
@@ -1912,10 +1936,10 @@ const ACC0 = /*ACC_START*/{"cust":[{"id":"mwates4zq7sp","name":"امیرحسین
   const lb = $("lockBtn");
   const updLock = () => { lb.textContent = ADMIN ? "🔓" : "🔒"; lb.setAttribute("aria-label", ADMIN ? "پنل مدیر" : "ورود مدیر"); };
   function adminMenu() {
-    mdBox('<h3>🔓 پنل مدیر</h3><div class="am"><button data-k="add">➕ کالای جدید</button><button data-k="pct">💰 ویرایش درصدی قیمت‌ها</button><button data-k="list">📋 لیست کامل کالاها و خدمات</button><button data-k="pub">🚀 انتشار روی سایت</button><button data-k="gh">⚙️ توکن گیت‌هاب</button><button data-k="out" style="color:#c22338">🚪 خروج از حالت مدیر</button></div>');
+    mdBox('<h3>🔓 پنل مدیر</h3><div class="am"><button data-k="add">➕ کالای جدید</button><button data-k="pct">💰 ویرایش درصدی قیمت‌ها</button><button data-k="pub">🚀 انتشار روی سایت</button><button data-k="gh">⚙️ توکن گیت‌هاب</button><button data-k="out" style="color:#c22338">🚪 خروج از حالت مدیر</button></div>');
     $("md").querySelector(".am").onclick = e => {
       const b = e.target.closest("button"); if (!b) return; const k = b.dataset.k; mdClose();
-      if (k === "list") window.listOpen && window.listOpen(); else if (k === "add") productForm(null); else if (k === "pct") pctBox(); else if (k === "pub") pushToGitHub(true); else if (k === "gh") ghBox(); else if (k === "out") setAdmin(false);
+      if (k === "add") productForm(null); else if (k === "pct") pctBox(); else if (k === "pub") pushToGitHub(true); else if (k === "gh") ghBox(); else if (k === "out") setAdmin(false);
     };
   }
   lb.onclick = () => { if (!ADMIN) loginBox(); else adminMenu(); };
