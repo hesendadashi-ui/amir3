@@ -374,9 +374,9 @@ section .cell span{color:#23254e;font-weight:bold}
   <div id="inf"><div class="dt"><span id="dtd"></span><span id="dtt"></span></div><div id="evt" class="ev" hidden></div><div class="lk"><div class="lh">💰 قیمت دلار</div><div class="lr"><span>💵 قیمت دلار</span><div><a href="https://www.tgju.org/profile/price_dollar_rl" target="_blank" rel="noopener">TGJU</a><a href="https://alanchand.com/currencies-price/usd" target="_blank" rel="noopener">الان‌چند</a></div></div></div><div class="lk"><div class="lh">⚽ اخبار ورزشی</div><div class="lr"><span>📰 آخرین اخبار</span><div><a href="https://www.varzesh3.com/" target="_blank" rel="noopener">ورزش۳</a><a href="https://footballi.net/" target="_blank" rel="noopener">فوتبالی</a></div></div></div></div>
   <div id="pick"><a class="pk p1" href="#shop"><b>✏️</b>لوازم‌التحریر<small>دفتر، مداد، جامدادی و…</small></a><a class="pk p2" href="#cafe"><b>☕</b>کافی‌نت<small>پرینت، کپی، ثبت‌نام</small></a><a class="pk p3" href="#comp"><b>💻</b>کامپیوتری<small>نصب ویندوز، فلش، لوازم</small></a><a class="pk p4" href="#dsg"><b>📐</b>طراحی<small>سه‌بعدی و برش پلان</small></a></div>
   <section id="shop"><h2><span>لوازم‌التحریر</span><small id="cnt"></small></h2><div class="grid" id="grid"></div><button class="more" id="more">نمایش بیشتر</button></section>
-  <section id="cafe"><h2><span>کافی‌نت</span></h2><div class="tbl" id="tbl"></div><h2 id="hC" hidden><span>کالاهای کافی‌نت</span></h2><div class="grid" id="gridC"></div></section>
-  <section id="comp"><h2><span>کامپیوتری</span></h2><div class="tbl" id="tbl2"></div><h2 id="hK"><span>کالاهای کامپیوتری و لوازم جانبی</span></h2><div class="grid" id="grid2"></div></section>
-  <section id="dsg"><h2><span>طراحی</span></h2><div class="tbl" id="tbl3"></div><h2 id="hD" hidden><span>کالاهای طراحی</span></h2><div class="grid" id="gridD"></div></section>
+  <section id="cafe"><h2><span>کافی‌نت</span></h2><div class="tbl" id="tbl"></div><div class="grid" id="gridC"></div></section>
+  <section id="comp"><h2><span>کامپیوتری</span></h2><div class="tbl" id="tbl2"></div><div class="grid" id="grid2"></div></section>
+  <section id="dsg"><h2><span>طراحی</span></h2><div class="tbl" id="tbl3"></div><div class="grid" id="gridD"></div></section>
 
   <h2 id="about"><span>درباره ما</span></h2>
   <div class="ab" id="ab"></div>
@@ -487,9 +487,9 @@ function render(){
   const NF = "<p style='padding:14px'>موردی پیدا نشد.</p>";
   $("grid").innerHTML = list.slice(0, shown).map((d, ix) => mk(d, ix, 1)).join("") || NF;
   const l2 = window.__LS[4], lC = window.__LS[2], lD = window.__LS[3];
-  $("grid2").innerHTML = l2.map((d, ix) => mk(d, ix, 4)).join("") || NF;
-  $("gridC").innerHTML = lC.map((d, ix) => mk(d, ix, 2)).join(""); $("hC").hidden = !lC.length;
-  $("gridD").innerHTML = lD.map((d, ix) => mk(d, ix, 3)).join(""); $("hD").hidden = !lD.length;
+  $("grid2").innerHTML = l2.map((d, ix) => mk(d, ix, 4)).join("");
+  $("gridC").innerHTML = lC.map((d, ix) => mk(d, ix, 2)).join("");
+  $("gridD").innerHTML = lD.map((d, ix) => mk(d, ix, 3)).join("");
   $("more").style.display = list.length > shown ? "block" : "none";
   const sv = id => !!$(id).innerHTML.trim(), hasAny = list.length || l2.length || lC.length || lD.length || sv("tbl") || sv("tbl2") || sv("tbl3");
   $("shop").hidden = !!q && !list.length && !!hasAny;
