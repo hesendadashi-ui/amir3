@@ -1575,22 +1575,24 @@ ${x.ref ? `<div class="hn">نام فقط برای همین فاکتور عوض �
   }
   function listCsv() {
     const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-    const lines = [["بخش", "دسته", "کد کالا", "نام", "مشخصات", "قیمت (تومان)"].map(q).join(",")];
-    listData().forEach(B => B.groups.forEach(g => g.rows.forEach(r => lines.push([B.S.n, g.t, r.c, r.n, r.d, r.p || "استعلام"].map(q).join(",")))));
+    const lines = [["بخش", "دسته", "ردیف", "کد کالا", "نام", "مشخصات", "قیمت (تومان)"].map(q).join(",")];
+    listData().forEach(B => B.groups.forEach(g => g.rows.forEach((r, ri) => lines.push([B.S.n, g.t, ri + 1, r.c, r.n, r.d, r.p || "استعلام"].map(q).join(",")))));
     const b = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" }), u = URL.createObjectURL(b), a = document.createElement("a");
     a.href = u; a.download = "price-list.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000);
   }
   function listOpen() {
     const data = listData(); if (!data.length) { toast("لیستی برای نمایش نیست"); return; }
     toast("در حال ساخت لیست...");
-    const W = 1000, P = 1414, TOPY = 112, BOT = P - 44, XR = 960, XL = 40, NR = 880, NW = 560, mc = document.createElement("canvas").getContext("2d"); mc.direction = "rtl";
-    const els = []; data.forEach(B => { els.push({ k: "s", B, h: 46 });
-      B.groups.forEach(g => { els.push({ k: "g", B, t: g.t, h: 34 });
-        g.rows.forEach(r => { mc.font = "bold 19px " + FF; const nl = wrapL(mc, r.n, NW); mc.font = "16px " + FF; const dl = r.d ? wrapL(mc, r.d, NW) : []; els.push({ k: "r", B, r, nl, dl, h: Math.max(36, 12 + nl.length * 25 + dl.length * 21) }); }); }); });
-    const pagesL = []; let pg = { items: [] }, y = TOPY; pagesL.push(pg);
+    const W = 1000, P = 1414, TOPY = 116, BOT = P - 44, CW = 452, XRS = [960, 492], mc = document.createElement("canvas").getContext("2d"); mc.direction = "rtl";
+    const NW = CW - 84 - 134;
+    const els = []; data.forEach(B => { els.push({ k: "s", B, h: 48 });
+      B.groups.forEach(g => { els.push({ k: "g", B, t: g.t, h: 36 });
+        g.rows.forEach((r, ri) => { mc.font = "bold 21px " + FF; const nl = wrapL(mc, r.n, NW); mc.font = "17px " + FF; const dl = r.d ? wrapL(mc, r.d, NW + 60) : []; els.push({ k: "r", B, r, ri: ri + 1, nl, dl, h: Math.max(42, 14 + nl.length * 28 + dl.length * 23) }); }); }); });
+    const pagesL = []; let pg = { items: [] }, col = 0, y = TOPY; pagesL.push(pg);
+    const next = () => { if (col === 0) { col = 1; y = TOPY; } else { pg = { items: [] }; pagesL.push(pg); col = 0; y = TOPY; } };
     els.forEach((e, i) => { let need = e.h; if (e.k === "s") need += (els[i + 1] ? els[i + 1].h : 0) + (els[i + 2] ? els[i + 2].h : 0); else if (e.k === "g") need += els[i + 1] ? els[i + 1].h : 0;
-      if (y + need > BOT) { pg = { items: [] }; pagesL.push(pg); y = TOPY; }
-      pg.items.push({ e, y }); y += e.h; });
+      if (y + need > BOT) next();
+      pg.items.push({ e, col, y }); y += e.h; });
     const cvs = pagesL.map((pgL, pi) => {
       const cv = document.createElement("canvas"); cv.width = W * 1.5; cv.height = P * 1.5; const c = cv.getContext("2d"); c.scale(1.5, 1.5); c.direction = "rtl"; c.textBaseline = "alphabetic";
       const tx = (s, x, y, font, col, al) => { c.font = font; c.fillStyle = col; c.textAlign = al || "right"; c.fillText(s, x, y); };
@@ -1600,16 +1602,17 @@ ${x.ref ? `<div class="hn">نام فقط برای همین فاکتور عوض �
       tx(SHOP, 960, 36, "bold 28px " + FF, "#fff"); tx("لیست کامل کالاها و خدمات", 960, 64, "bold 20px " + FF, "#ffc928");
       tx(today(), 40, 46, "19px " + FF, "#fff", "left");
       tx("صفحه " + fd(pi + 1) + " از " + fd(pagesL.length), W / 2, P - 14, "15px " + FF, "#81858b", "center");
-      tx("کد", XR - 6, 102, "bold 15px " + FF, "#9aa3bd"); tx("نام کالا / خدمت و مشخصات", NR, 102, "bold 15px " + FF, "#9aa3bd"); tx("قیمت (تومان)", XL + 6, 102, "bold 15px " + FF, "#9aa3bd", "left");
-      pgL.items.forEach(({ e, y }) => {
-        const S = e.B.S;
-        if (e.k === "s") { box(XL, y + 3, 920, 38, 10, S.col); tx(S.n, XR - 14, y + 30, "bold 23px " + FF, S.tc); return; }
-        if (e.k === "g") { box(XL, y + 3, 920, 27, 7, S.col + "38"); c.fillStyle = S.col; c.fillRect(XR - 5, y + 3, 5, 27); tx(e.t, XR - 14, y + 22, "bold 16px " + FF, "#23254e"); return; }
-        tx(e.r.c ? cdf(e.r.c) : "", XR - 6, y + 25, "16px " + FF, "#81858b");
-        let ty = y + 24; e.nl.forEach(s => { tx(s, NR, ty, "bold 19px " + FF, "#23254e"); ty += 25; });
-        e.dl.forEach(s => { tx(s, NR, ty - 3, "16px " + FF, "#6b6f7a"); ty += 21; });
-        tx(e.r.p ? fa(e.r.p) : "استعلام", XL + 6, y + 25, "bold 18px " + FF, e.r.p ? "#1c4fb8" : "#9aa3bd", "left");
-        c.strokeStyle = "#eef1f8"; c.lineWidth = 1; c.beginPath(); c.moveTo(XL, y + e.h); c.lineTo(XR, y + e.h); c.stroke();
+      XRS.forEach(xr => { const xl = xr - CW; tx("ردیف", xr - 4, 104, "bold 14px " + FF, "#9aa3bd"); tx("کد", xr - 42, 104, "bold 14px " + FF, "#9aa3bd"); tx("نام کالا / خدمت", xr - 84, 104, "bold 14px " + FF, "#9aa3bd"); tx("قیمت", xl + 6, 104, "bold 14px " + FF, "#9aa3bd", "left"); });
+      c.strokeStyle = "#e3e8f5"; c.lineWidth = 1.5; c.beginPath(); c.moveTo(W / 2, TOPY - 6); c.lineTo(W / 2, BOT); c.stroke();
+      pgL.items.forEach(({ e, col, y }) => {
+        const S = e.B.S, xr = XRS[col], xl = xr - CW;
+        if (e.k === "s") { box(xl, y + 3, CW, 40, 10, S.col); tx(S.n, xr - 12, y + 32, "bold 24px " + FF, S.tc); return; }
+        if (e.k === "g") { box(xl, y + 3, CW, 29, 7, S.col + "38"); c.fillStyle = S.col; c.fillRect(xr - 5, y + 3, 5, 29); tx(e.t, xr - 14, y + 24, "bold 17px " + FF, "#23254e"); return; }
+        tx(fd(e.ri), xr - 4, y + 27, "15px " + FF, "#81858b"); tx(e.r.c ? cdf(e.r.c) : "", xr - 42, y + 27, "15px " + FF, "#81858b");
+        let ty = y + 28; e.nl.forEach(s => { tx(s, xr - 84, ty, "bold 21px " + FF, "#23254e"); ty += 28; });
+        e.dl.forEach(s => { tx(s, xr - 84, ty - 3, "17px " + FF, "#6b6f7a"); ty += 23; });
+        tx(e.r.p ? fa(e.r.p) : "استعلام", xl + 6, y + 30, (e.r.p ? "bold 25px " : "bold 20px ") + FF, e.r.p ? "#1c4fb8" : "#9aa3bd", "left");
+        c.strokeStyle = "#eef1f8"; c.lineWidth = 1; c.beginPath(); c.moveTo(xl, y + e.h); c.lineTo(xr, y + e.h); c.stroke();
       });
       return cv; });
     preview(cvs, cvs.length, "A4", { base: "price-list", title: "لیست قیمت", csv: listCsv });
