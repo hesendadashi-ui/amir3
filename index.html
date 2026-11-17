@@ -816,7 +816,7 @@ function delItem(item) {
 }
 function pctBox() {
   const SEL = new Set(); let list = ITEMS();
-  mdBox('<h3>💰 ویرایش درصدی قیمت‌ها</h3><label>درصد (برای افزایش عدد مثبت، برای کاهش منفی؛ مثلاً 10 یا -5)</label><input id="pc" inputmode="decimal" placeholder="10">' +
+  mdBox('<h3>💰 افزایش / کاهش قیمت‌ها</h3><label>نوع تغییر</label><select id="pt"><option value="pct">درصدی ٪</option><option value="amt">مبلغی (تومان)</option></select><label id="pcl">درصد (برای افزایش عدد مثبت، برای کاهش منفی؛ مثلاً 10 یا -5)</label><input id="pc" inputmode="decimal" placeholder="10">' +
     '<label>شامل</label><select id="ps"><option value="all">همه‌ی کالاها</option>' + CATS.slice(1).map((c, i) => '<option value="' + (i + 1) + '">فقط ' + CDOT[i + 1] + " " + c[0] + '</option>').join("") + '<option value="pick">✅ فقط کالاهایی که خودم انتخاب می‌کنم</option></select>' +
     '<div id="pk" style="display:none"><input id="pq" placeholder="🔎 جستجوی نام یا کد کالا..." autocomplete="off" style="margin-top:6px">' +
     '<div style="display:flex;gap:6px;margin:6px 0"><button type="button" id="pa" style="flex:1;border:0;border-radius:10px;padding:6px;font:inherit;font-size:15px;background:var(--gray);cursor:pointer">☑️ انتخاب همه‌ی نتایج</button><button type="button" id="pn" style="flex:1;border:0;border-radius:10px;padding:6px;font:inherit;font-size:15px;background:var(--gray);cursor:pointer">✖️ پاک‌کردن انتخاب</button></div>' +
@@ -824,8 +824,9 @@ function pctBox() {
     '<label>رند کردن</label><select id="pr"><option value="1000">نزدیک‌ترین ۱۰۰۰ تومان</option><option value="100">نزدیک‌ترین ۱۰۰ تومان</option><option value="1">بدون رند</option></select><div class="msg" id="pm"></div>' +
     '<div class="row"><button id="c0">انصراف</button><button class="ok" id="c1">اعمال</button></div>');
   const key = it => it[6] || it[0];
-  const getPct = () => parseFloat($("pc").value.replace("٫", ".").replace(/[−–]/g, "-").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
-  const newP = (it, pct, st) => Math.max(st, Math.round(it[1] * (1 + pct / 100) / st) * st);
+  const getPct = () => parseFloat($("pc").value.replace("٫", ".").replace(/[٬,،\s]/g, "").replace(/[−–]/g, "-").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+  const isAmt = () => $("pt").value === "amt";
+  const newP = (it, pct, st) => Math.max(st, Math.round((isAmt() ? it[1] + pct : it[1] * (1 + pct / 100)) / st) * st);
   const pick = () => $("ps").value === "pick";
   function draw() {
     const q = norm($("pq").value.trim()), qd = cdn($("pq").value.trim()), pct = getPct(), st = +$("pr").value, ok = !isNaN(pct) && pct !== 0;
@@ -836,6 +837,7 @@ function pctBox() {
         (z ? "استعلام" : fa(it[1]) + (on && ok ? ' ← <b style="color:' + (pct > 0 ? "#ef394e" : "#1b8450") + '">' + fa(newP(it, pct, st)) + "</b>" : "")) + "</span></label>"; }).join("") : '<p style="padding:10px;margin:0;color:var(--muted)">موردی پیدا نشد.</p>';
     $("pcn").textContent = fa(SEL.size) + " کالا انتخاب شده";
   }
+  $("pt").onchange = () => { const a = isAmt(); $("pcl").textContent = a ? "مبلغ به تومان (برای افزایش عدد مثبت، برای کاهش منفی؛ مثلاً 10000 یا -5000)" : "درصد (برای افزایش عدد مثبت، برای کاهش منفی؛ مثلاً 10 یا -5)"; $("pc").placeholder = a ? "10000" : "10"; $("pc").inputMode = a ? "numeric" : "decimal"; if (pick()) draw(); };
   $("ps").onchange = () => { $("pk").style.display = pick() ? "block" : "none"; if (pick()) draw(); };
   $("pq").oninput = draw; $("pc").addEventListener("input", () => { if (pick()) draw(); }); $("pr").onchange = () => { if (pick()) draw(); };
   $("pl").onchange = e => { const c = e.target.closest("[data-i]"); if (!c) return; const it = list[+c.dataset.i]; if (c.checked) SEL.add(key(it)); else SEL.delete(key(it)); draw(); };
@@ -844,11 +846,11 @@ function pctBox() {
   $("c0").onclick = mdClose;
   $("c1").onclick = () => {
     const pct = getPct();
-    if (isNaN(pct) || pct === 0) { $("pm").textContent = "یک درصد معتبر بنویس"; return; }
+    if (isNaN(pct) || pct === 0) { $("pm").textContent = isAmt() ? "یک مبلغ معتبر بنویس" : "یک درصد معتبر بنویس"; return; }
     const st = +$("pr").value, mode = $("ps").value, cats = mode === "all" || mode === "pick" ? 0 : +mode;
     if (mode === "pick" && !SEL.size) { $("pm").textContent = "حداقل یک کالا را تیک بزن"; return; }
     const targets = ITEMS().filter(it => it[1] && (mode === "pick" ? SEL.has(key(it)) : !cats || it[2] === cats));
-    if (!confirm((pct > 0 ? "افزایش " : "کاهش ") + Math.abs(pct) + "٪ روی قیمت " + fa(targets.length) + " کالا اعمال شود؟")) return;
+    if (!confirm((pct > 0 ? "افزایش " : "کاهش ") + (isAmt() ? fa(Math.abs(pct)) + " تومان" : Math.abs(pct) + "٪") + " روی قیمت " + fa(targets.length) + " کالا اعمال شود؟")) return;
     targets.forEach(it => {
       const np = newP(it, pct, st);
       if (isBase(it[6] || it[0])) { const kk = it[6] || it[0]; OV.mod = OV.mod || {}; OV.mod[kk] = Object.assign({}, OV.mod[kk], { p: np }); }
