@@ -597,6 +597,7 @@ function hsh(x) { const t = JSON.stringify(x); let h = 5381; for (let i = 0; i <
 function snapOV(o) { o = o || {}; const f = m => { const r = {}; Object.keys(m || {}).forEach(k => r[k] = hsh(m[k])); return r; }, a = {}; (o.add || []).forEach(x => a[x[0]] = hsh(x));
   return { mod: f(o.mod), svc: f(o.svc), add: a, del: (o.del || []).slice() }; }
 function loadBase() { try { const b = JSON.parse(localStorage.getItem(LSB) || "null"); return b && b.mod ? b : null; } catch (e) { return null; } }
+function loadBaseSafe() { try { if (Date.now() - (+localStorage.getItem("ahmadiPushT") || 0) < 900000) return snapOV(OV0); } catch (e) {} return loadBase(); }
 function saveBase(o) { try { localStorage.setItem(LSB, JSON.stringify(snapOV(o))); } catch (e) {} }
 function mergeOV(L, R, B) {
   L = L || {}; R = R || {};
@@ -622,7 +623,7 @@ function unpackOV(o) { if (!o.v || o.v < 2) { o = Object.assign({}, o, { v: 2, m
   return Object.assign({}, o, { mod: m, add: (o.add || []).map(x => x[4] === "@" ? x.slice(0, 4).concat([ba[x[0]] ? ba[x[0]][4] : ""], x.slice(5)) : x) }); }
 const lsOV = o => localStorage.setItem(LSK, JSON.stringify(packOV(o)));
 let ADMIN = false, OV = JSON.parse(JSON.stringify(OV0));
-try { if (sessionStorage.getItem("ahmadiAdmin") === "1") { ADMIN = true; const s = localStorage.getItem(LSK); if (s) { OV = mergeOV(unpackOV(JSON.parse(s)), OV0, loadBase()); lsOV(OV); saveBase(OV0); } } } catch (e) {}
+try { if (sessionStorage.getItem("ahmadiAdmin") === "1") { ADMIN = true; const s = localStorage.getItem(LSK); if (s) { OV = mergeOV(unpackOV(JSON.parse(s)), OV0, loadBaseSafe()); lsOV(OV); saveBase(OV0); } } } catch (e) {}
 let pushT;
 const saveOV = () => {
   try { const k = getKey(); if (k) OV.gk = k; } catch (e) {}
@@ -647,7 +648,7 @@ const mdBox = h => { $("md").innerHTML = '<div class="box">' + h + '</div>'; $("
 const mdClose = () => $("md").classList.remove("on");
 $("md").onclick = e => { if (e.target === $("md")) mdClose(); };
 
-function setAdmin(v) { ADMIN = v; document.body.classList.toggle("ad", v); try { sessionStorage.setItem("ahmadiAdmin", v ? "1" : "0"); if (v) { const s = localStorage.getItem(LSK); if (s) { OV = mergeOV(unpackOV(JSON.parse(s)), OV0, loadBase()); lsOV(OV); saveBase(OV0); } } else OV = JSON.parse(JSON.stringify(OV0)); } catch (e) {} render(); }
+function setAdmin(v) { ADMIN = v; document.body.classList.toggle("ad", v); try { sessionStorage.setItem("ahmadiAdmin", v ? "1" : "0"); if (v) { const s = localStorage.getItem(LSK); if (s) { OV = mergeOV(unpackOV(JSON.parse(s)), OV0, loadBaseSafe()); lsOV(OV); saveBase(OV0); } } else OV = JSON.parse(JSON.stringify(OV0)); } catch (e) {} render(); }
 function loginBox() {
   open(false);
   mdBox('<h3>🔒 ورود مدیر</h3><label>رمز عبور</label><input id="pw" type="text" class="pwm" inputmode="numeric" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore><div class="msg" id="pm"></div><div class="row"><button id="c0">انصراف</button><button class="ok" id="c1">ورود</button></div>');
@@ -816,7 +817,7 @@ function delItem(item) {
 }
 function pctBox() {
   const SEL = new Set(); let list = ITEMS();
-  mdBox('<h3>💰 افزایش / کاهش قیمت‌ها</h3><label>نوع تغییر</label><select id="pt"><option value="pct">درصدی ٪</option><option value="amt">مبلغی (تومان)</option></select><label id="pcl">درصد (برای افزایش عدد مثبت، برای کاهش منفی؛ مثلاً 10 یا -5)</label><input id="pc" inputmode="decimal" placeholder="10">' +
+  mdBox('<h3>💰 افزایش / کاهش قیمت‌ها</h3><label>افزایش یا کاهش؟</label><select id="pd"><option value="inc">⬆️ افزایش قیمت</option><option value="dec">⬇️ کاهش قیمت</option></select><label>نوع تغییر</label><select id="pt"><option value="pct">درصدی ٪</option><option value="amt">مبلغی (تومان)</option></select><label id="pcl">درصد (عدد را مثبت بنویس؛ مثلاً 10)</label><input id="pc" inputmode="decimal" placeholder="10">' +
     '<label>شامل</label><select id="ps"><option value="all">همه‌ی کالاها</option>' + CATS.slice(1).map((c, i) => '<option value="' + (i + 1) + '">فقط ' + CDOT[i + 1] + " " + c[0] + '</option>').join("") + '<option value="pick">✅ فقط کالاهایی که خودم انتخاب می‌کنم</option></select>' +
     '<div id="pk" style="display:none"><input id="pq" placeholder="🔎 جستجوی نام یا کد کالا..." autocomplete="off" style="margin-top:6px">' +
     '<div style="display:flex;gap:6px;margin:6px 0"><button type="button" id="pa" style="flex:1;border:0;border-radius:10px;padding:6px;font:inherit;font-size:15px;background:var(--gray);cursor:pointer">☑️ انتخاب همه‌ی نتایج</button><button type="button" id="pn" style="flex:1;border:0;border-radius:10px;padding:6px;font:inherit;font-size:15px;background:var(--gray);cursor:pointer">✖️ پاک‌کردن انتخاب</button></div>' +
@@ -824,7 +825,8 @@ function pctBox() {
     '<label>رند کردن</label><select id="pr"><option value="1000">نزدیک‌ترین ۱۰۰۰ تومان</option><option value="100">نزدیک‌ترین ۱۰۰ تومان</option><option value="1">بدون رند</option></select><div class="msg" id="pm"></div>' +
     '<div class="row"><button id="c0">انصراف</button><button class="ok" id="c1">اعمال</button></div>');
   const key = it => it[6] || it[0];
-  const getPct = () => parseFloat($("pc").value.replace("٫", ".").replace(/[٬,،\s]/g, "").replace(/[−–]/g, "-").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+  const getPct = () => { const v = Math.abs(getRaw()); return $("pd").value === "dec" ? -v : v; };
+  const getRaw = () => parseFloat($("pc").value.replace("٫", ".").replace(/[٬,،\s]/g, "").replace(/[−–]/g, "-").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
   const isAmt = () => $("pt").value === "amt";
   const newP = (it, pct, st) => Math.max(st, Math.round((isAmt() ? it[1] + pct : it[1] * (1 + pct / 100)) / st) * st);
   const pick = () => $("ps").value === "pick";
@@ -837,7 +839,8 @@ function pctBox() {
         (z ? "استعلام" : fa(it[1]) + (on && ok ? ' ← <b style="color:' + (pct > 0 ? "#ef394e" : "#1b8450") + '">' + fa(newP(it, pct, st)) + "</b>" : "")) + "</span></label>"; }).join("") : '<p style="padding:10px;margin:0;color:var(--muted)">موردی پیدا نشد.</p>';
     $("pcn").textContent = fa(SEL.size) + " کالا انتخاب شده";
   }
-  $("pt").onchange = () => { const a = isAmt(); $("pcl").textContent = a ? "مبلغ به تومان (برای افزایش عدد مثبت، برای کاهش منفی؛ مثلاً 10000 یا -5000)" : "درصد (برای افزایش عدد مثبت، برای کاهش منفی؛ مثلاً 10 یا -5)"; $("pc").placeholder = a ? "10000" : "10"; $("pc").inputMode = a ? "numeric" : "decimal"; if (pick()) draw(); };
+  $("pd").onchange = () => { if (pick()) draw(); };
+  $("pt").onchange = () => { const a = isAmt(); $("pcl").textContent = a ? "مبلغ به تومان (عدد را مثبت بنویس؛ مثلاً 10000)" : "درصد (عدد را مثبت بنویس؛ مثلاً 10)"; $("pc").placeholder = a ? "10000" : "10"; $("pc").inputMode = a ? "numeric" : "decimal"; if (pick()) draw(); };
   $("ps").onchange = () => { $("pk").style.display = pick() ? "block" : "none"; if (pick()) draw(); };
   $("pq").oninput = draw; $("pc").addEventListener("input", () => { if (pick()) draw(); }); $("pr").onchange = () => { if (pick()) draw(); };
   $("pl").onchange = e => { const c = e.target.closest("[data-i]"); if (!c) return; const it = list[+c.dataset.i]; if (c.checked) SEL.add(key(it)); else SEL.delete(key(it)); draw(); };
@@ -943,12 +946,12 @@ async function pushToGitHub(manual) {
       const MG = remoteOV ? mergeOV(OV, remoteOV, loadBase()) : OV;
       const OVp = Object.assign({}, MG); delete OVp.gk; const json = JSON.stringify(OVp).replace(/<\//g, "<\\/");
       const out = text.replace(re, () => "/*OV_"+"START*/" + json + "/*OV_"+"END*/");
-      if (out === text) { if (MG !== OV) { OV = MG; try { lsOV(OV); } catch (e7) {} render(); } saveBase(MG); toast("✅ همه‌چیز از قبل روی سایت است"); return true; }
+      if (out === text) { if (MG !== OV) { OV = MG; try { lsOV(OV); } catch (e7) {} render(); } saveBase(MG); try { localStorage.setItem("ahmadiPushT", String(Date.now())); } catch (e8) {} toast("✅ همه‌چیز از قبل روی سایت است"); return true; }
       const bytes = new TextEncoder().encode(out); let s = "";
       for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
       const r3 = await fetch(file, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, ghHead(c.token)),
         body: JSON.stringify({ message: "update from admin", content: btoa(s), sha: sha, branch: br }) });
-      if (r3.ok) { ghOld = sha; if (MG !== OV) { OV = MG; try { const k = getKey(); if (k) OV.gk = k; lsOV(OV); } catch (e7) {} render(); } saveBase(MG); toast("✅ روی گیت‌هاب ذخیره شد؛ تا حدود یک دقیقه دیگر روی سایت می‌آید"); return true; }
+      if (r3.ok) { ghOld = sha; if (MG !== OV) { OV = MG; try { const k = getKey(); if (k) OV.gk = k; lsOV(OV); } catch (e7) {} render(); } saveBase(MG); try { localStorage.setItem("ahmadiPushT", String(Date.now())); } catch (e8) {} toast("✅ روی گیت‌هاب ذخیره شد؛ تا حدود یک دقیقه دیگر روی سایت می‌آید"); return true; }
       if (r3.status !== 409 && r3.status !== 422) throw new Error(r3.status);
       let gm = ""; try { gm = (await r3.json()).message || ""; } catch (e5) {}
       lastInfo = r3.status + (gm ? " " + gm.slice(0, 120) : "");
