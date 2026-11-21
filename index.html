@@ -1414,15 +1414,16 @@ ${x.ref ? `<div class="hn">نام فقط برای همین فاکتور عوض �
     const pqv = IV.poem !== false ? pq() : null; let ql = [], pqH = 0;
     if (pqv) { mc.font = "19px " + FF; ql = wrapL(mc, "«" + pqv.quote[0] + "»", 840); pqH = 150 + (ql.length - 1) * 26; }
     const FOOT = 58 + (INFO.address ? 28 : 0), TH = 40, HB = 112, HH = 40;
-    // اگر کل فاکتور با کمی بلندتر شدن برگه در یک صفحه جا می‌شود، صفحه را نشکن
-    let P = P0;
-    const NEED1 = HB + 6 + 12 + 74 + 14 + HH + rows.reduce((s, r) => s + r.h, 0) + 14 + cols + 14 + (pqv ? pqH + 6 : 0) + TH + FOOT + 16;
-    if (NEED1 > P0 && NEED1 <= P0 * 1.7) P = Math.ceil(NEED1);
+    const P = P0; // اندازه‌ی استاندارد A4/A5
     // چیدمان و صفحه‌بندی (هر صفحه هم‌نسبت A4/A5)
     let pg = 0, y = HB + 6 + 12 + 74 + 14; const heads = [y]; y += HH;
     rows.forEach(r => { if (y + r.h > (pg + 1) * P - 40) { pg++; y = pg * P + 80; heads.push(y); y += HH; } r.y = y; y += r.h; });
     const tEnd = y; let top = y + 14;
-    if (top + cols + 14 + (pqv ? pqH + 6 : 0) + TH + FOOT > (pg + 1) * P) { pg++; top = pg * P + 80; }
+    // جمع‌بندی: اگر روی همین صفحه جا شد همان‌جا، وگرنه صفحه‌ی بعد
+    if (top + cols > (pg + 1) * P - 40) { pg++; top = pg * P + 80; }
+    // شعر + تشکر + نوار پایین: هرجا جا شد؛ وگرنه صفحه‌ی بعد (بدون خالی گذاشتن نیمه‌ی صفحه)
+    let bTop = top + cols + 14; const bH = (pqv ? pqH + 6 : 0) + TH;
+    if (bTop + bH + FOOT > (pg + 1) * P) { pg++; bTop = pg * P + 80; }
     const pages = pg + 1, H = pages * P;
     const SS = Math.max(1, Math.min(2, Math.sqrt(7e6 / (W * H)))), pxW = Math.round(W * SS), pxH = Math.round(P * SS);
     const cv = document.createElement("canvas"); cv.width = pxW; cv.height = pxH * pages;
@@ -1497,9 +1498,9 @@ ${x.ref ? `<div class="hn">نام فقط برای همین فاکتور عوض �
     c.setLineDash([8, 6]); rr(40, ly, 400, 70, 12); c.strokeStyle = "#b9c4e4"; c.lineWidth = 2; c.stroke(); c.setLineDash([]);
     tx("مهر و امضا", 240, ly + 28, "18px " + FF, "#9aa3bd", "center");
     // شعر، جمله و تشکر درست زیر جمع‌بندی؛ نوار تماس پایین صفحه‌ی آخر
-    const fTop = H - FOOT; let thy = top + cols + 34;
+    const fTop = H - FOOT; let thy = bTop + 20;
     if (pqv) {
-      const pqTop = top + cols + 14; thy = pqTop + pqH + 26;
+      const pqTop = bTop; thy = pqTop + pqH + 26;
       rr(60, pqTop, 880, pqH - 8, 12); c.fillStyle = "#fbfcff"; c.fill(); c.strokeStyle = "#e3e8f5"; c.lineWidth = 2; c.stroke();
       const pv0 = pqv.poem, qv = pqv.quote;
       tx(pv0[0], W / 2, pqTop + 34, "bold 21px " + FF, "#23254e", "center"); tx(pv0[1], W / 2, pqTop + 62, "bold 21px " + FF, "#23254e", "center");
