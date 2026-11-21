@@ -1395,7 +1395,7 @@ ${x.ref ? `<div class="hn">نام فقط برای همین فاکتور عوض �
     });
   }
   function draw(items, logo, pics) {
-    const T = totals(), M = MODES[MODE], W = 1000, P = 1414, L = "‎", paper = paperOf();
+    const T = totals(), M = MODES[MODE], W = 1000, P0 = 1414, L = "‎", paper = paperOf();
     const mc = document.createElement("canvas").getContext("2d"); mc.direction = "rtl";
     const hasPic = !!(pics && pics.some(Boolean)), hasCode = items.some(x => x.c), NR = hasPic ? 816 : 894, NW = NR - (hasCode ? 600 : 512);
     const rows = items.map((x, i) => { mc.font = "bold 22px " + FF; const nl = wrapL(mc, x.n || "—", NW); mc.font = "18px " + FF; const dl = (x.d || "").trim() ? wrapL(mc, x.d, NW) : []; const dd = lineD(x) ? "تخفیف ردیف: " + (x.dt === "amt" ? "" : fa(x.dv) + "٪ ") + "(−" + fa(lineD(x)) + " تومان)" : ""; return { x, nl, dl, dd, pic: pics && pics[i] || null, h: Math.max(hasPic ? 64 : 44, 14 + nl.length * 29 + (dl.length + (dd ? 1 : 0)) * 24), y: 0 }; });
@@ -1414,6 +1414,10 @@ ${x.ref ? `<div class="hn">نام فقط برای همین فاکتور عوض �
     const pqv = IV.poem !== false ? pq() : null; let ql = [], pqH = 0;
     if (pqv) { mc.font = "19px " + FF; ql = wrapL(mc, "«" + pqv.quote[0] + "»", 840); pqH = 150 + (ql.length - 1) * 26; }
     const FOOT = 58 + (INFO.address ? 28 : 0), TH = 40, HB = 112, HH = 40;
+    // اگر کل فاکتور با کمی بلندتر شدن برگه در یک صفحه جا می‌شود، صفحه را نشکن
+    let P = P0;
+    const NEED1 = HB + 6 + 12 + 74 + 14 + HH + rows.reduce((s, r) => s + r.h, 0) + 14 + cols + 14 + (pqv ? pqH + 6 : 0) + TH + FOOT + 16;
+    if (NEED1 > P0 && NEED1 <= P0 * 1.7) P = Math.ceil(NEED1);
     // چیدمان و صفحه‌بندی (هر صفحه هم‌نسبت A4/A5)
     let pg = 0, y = HB + 6 + 12 + 74 + 14; const heads = [y]; y += HH;
     rows.forEach(r => { if (y + r.h > (pg + 1) * P - 40) { pg++; y = pg * P + 80; heads.push(y); y += HH; } r.y = y; y += r.h; });
@@ -1517,7 +1521,7 @@ ${x.ref ? `<div class="hn">نام فقط برای همین فاکتور عوض �
 
   /* ---------- ساخت PDF (بدون کتابخانه؛ هر صفحه یک تصویر JPEG روی کاغذ A4 یا A5) ---------- */
   function makePDF(urls, iw, ih, paper) {
-    const pw = paper === "A5" ? 419.53 : 595.28, ph = paper === "A5" ? 595.28 : 841.89, n = urls.length;
+    const pw = paper === "A5" ? 419.53 : 595.28, ph = Math.max(paper === "A5" ? 595.28 : 841.89, pw * ih / iw), n = urls.length;
     const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
     const put = d => { const u = typeof d === "string" ? enc.encode(d) : d; parts.push(u); len += u.length; };
     const begin = id => { offs[id] = len; put(id + " 0 obj\n"); };
